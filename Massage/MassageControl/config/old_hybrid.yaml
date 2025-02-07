@@ -1,0 +1,26 @@
+name: 'hybrid'
+
+# 姿态参数
+# mass_rot: [0.8,0.8,1]
+# stiff_rot: [9,9,9]
+mass_rot: [0.39,0.39,1.2]
+stiff_rot: [4,3.3,9]
+
+damp_rot: [3,3,-1]
+
+# 位控参数
+mass_trans: [5,5]
+stiff_trans: [200,200]
+damp_trans: [-1,-1]
+
+desired_xi: 1.2
+
+# 力控参数
+force_mass: 5
+force_damp: 50
+Kp_force: 1
+Kd_force: 0
+Ki_force: 0
+
+
+

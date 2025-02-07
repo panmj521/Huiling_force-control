@@ -1,0 +1,44 @@
+name: 'hybridPid'
+
+# 姿态参数
+# mass_rot: [0.4,0.4,0.4]
+# stiff_rot: [4,4,4]
+# desired_xi: 1.2
+# damp_rot: [-1,-1,-1]
+
+# mass_rot: [10,10,10]
+# stiff_rot: [1000,1000,1000]
+# damp_rot: [-125,-125,-125]
+# desired_xi: 0.7
+
+
+# mass_rot: [0.2, 0.2, 0.2]
+# stiff_rot: [4, 4, 4]
+# damp_rot: [0.6, 0.6, 0.6]
+# desired_xi: 1.0
+
+
+# 力控参数
+force_mass: 2.5
+force_damp: 25
+Kp_force: 0.6
+Kd_force: 0.0
+Ki_force: 0.0
+
+# 位控参数
+Kp: [70,70]
+Ki: [0,0]
+Kd: [5,5]
+
+# 位控参数
+Kp_R: [7,7,7]
+Ki_R: [0,0,0]
+Kd_R: [1,1,1]
+
+
+
+
+# # 位控参数
+# Kp: [90,90]
+# Kd: [25,25]
+

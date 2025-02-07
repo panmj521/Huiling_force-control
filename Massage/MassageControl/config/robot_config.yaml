@@ -1,0 +1,24 @@
+# 机械臂IP
+arm_ip: 114
+
+# 控制器
+controller: ['/home/jsfb/jsfb_ws/MassageRobot_huiling/Massage/MassageControl/config/admittance.yaml',
+              '/home/jsfb/jsfb_ws/MassageRobot_huiling/Massage/MassageControl/config/hybrid.yaml',
+              '/home/jsfb/jsfb_ws/MassageRobot_huiling/Massage/MassageControl/config/position.yaml',
+              '/home/jsfb/jsfb_ws/MassageRobot_huiling/Massage/MassageControl/config/admithybrid.yaml',
+              '/home/jsfb/jsfb_ws/MassageRobot_huiling/Massage/MassageControl/config/hybridPid.yaml',]
+
+
+# # 控制器
+# controller: ['MassageControl/config/admittance.yaml',
+#               'MassageControl/config/hybrid.yaml',
+#               'MassageControl/config/position.yaml',
+#               'MassageControl/config/admithybrid.yaml',
+#               'MassageControl/config/hybridPid.yaml',]
+      
+# 按摩头文件夹
+massage_head_dir: '/home/jsfb/jsfb_ws/global_config/massage_head'
+
+control_rate: 120 #150
+sensor_rate: 250
+command_rate: 90  #30

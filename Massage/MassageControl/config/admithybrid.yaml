@@ -1,0 +1,36 @@
+name: 'admithybrid'
+mass_tran: [4,4]
+mass_rot: [0.4,0.4,0.4]
+stiff_tran: [500,500]
+stiff_rot: [6,6,6]
+desired_xi: 1.1
+damp_tran: [-1,-1]
+damp_rot: [3,3,-1]
+
+# mass_tran: [5,5]
+# mass_rot: [5,5,5]
+# stiff_tran: [800,800]
+# stiff_rot: [80,80,80]
+# desired_xi: 0.7
+# damp_tran: [-125,-125]
+# damp_rot: [-125,-125,-125]
+# pos_scale_factor: 1
+# rot_scale_factor: 1
+
+
+# 力控参数
+force_mass: 2.5
+force_damp: 25
+Kp_force: 1.25
+Kd_force: 0.3
+Ki_force: 0.0001
+
+# # 力控参数
+# force_mass: 2.5
+# force_damp: 25
+# Kp_force: 1.25
+# Kd_force: 0.3
+# Ki_force: 0.0001
+
+
+

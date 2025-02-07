@@ -1,0 +1,50 @@
+name: admittance
+
+# #效果一般 
+# #M
+# mass_tran: [0.5, 0.5, 0.5]
+# mass_rot: [0.2,0.2,0.2]
+# #K  
+# stiff_tran: [5, 5, 5]
+# stiff_rot: [4, 4, 4] 
+# #D 阻尼
+# damp_tran: [25, 25, 25]
+# damp_rot: [0.6, 0.6, 0.6]
+# desired_xi: 1
+# pos_scale_factor: 500
+# rot_scale_factor: 1
+
+
+# #效果很yiban
+# #M 灵敏度，建议在0.7～1之间
+# mass_tran: [0.7, 0.8, 0.8]
+# mass_rot: [0.2,0.2,0.2]
+# #K  不要过小、会导致过奇异点出现发散
+# stiff_tran: [2,2,2]
+# stiff_rot: [1, 1, 1] 
+# #D 阻尼
+# damp_tran: [100, 100, 100]
+# damp_rot: [1, 1, 1]
+# desired_xi: 1
+# pos_scale_factor: 100
+# rot_scale_factor: 1
+
+
+#Z轴导纳控制参数   pos_scale_factor: 700   mass_tran:0.7  stiff_tran:1  damp_tran:25 效果较好
+
+
+
+
+desired_xi: 1
+pos_scale_factor: 700
+rot_scale_factor: 1
+mass_tran: [1, 1, 0.7]
+mass_rot: [0.2, 0.2, 0.2]
+stiff_tran: [8, 8, 1]
+stiff_rot: [4, 4, 4]
+# stiff_tran: [100, 100, 100]
+# stiff_rot: [1, 1, 1]
+damp_tran: [25, 25, 25]
+damp_rot: [0.6, 0.6, 0.6]
+# damp_tran: [40, 40, 40]
+# damp_rot: [3, 3, 3]
