@@ -30,17 +30,18 @@ name: admittance
 # rot_scale_factor: 1
 
 
-#Z轴导纳控制参数   pos_scale_factor: 700   mass_tran:0.7  stiff_tran:1  damp_tran:25 效果较好
+#Z轴导纳控制参数   pos_scale_factor_z: 700   mass_tran:0.7  stiff_tran:1  damp_tran:25 效果较好
 
 
 
 
 desired_xi: 1
-pos_scale_factor: 700
+pos_scale_factor_z: 700
+pos_scale_factor_xy: 500
 rot_scale_factor: 1
-mass_tran: [1, 1, 0.7]
+mass_tran: [0.7, 0.7, 0.7]
 mass_rot: [0.2, 0.2, 0.2]
-stiff_tran: [8, 8, 1]
+stiff_tran: [1, 1, 1]
 stiff_rot: [4, 4, 4]
 # stiff_tran: [100, 100, 100]
 # stiff_rot: [1, 1, 1]

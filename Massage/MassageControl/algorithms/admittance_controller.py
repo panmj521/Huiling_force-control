@@ -25,7 +25,8 @@ class AdmittanceController(BaseController):
         desired_xi = np.array(config_dict['desired_xi'])
         damp_tran = np.array(config_dict['damp_tran'])
         damp_rot = np.array(config_dict['damp_rot'])
-        self.pos_scale_factor = config_dict['pos_scale_factor']
+        self.pos_scale_factor_z = config_dict['pos_scale_factor_z']
+        self.pos_scale_factor_xy = config_dict['pos_scale_factor_xy']
         self.rot_scale_factor = config_dict['rot_scale_factor']
         for i in range(3):
             if damp_tran[i] < 0:
@@ -57,12 +58,7 @@ class AdmittanceController(BaseController):
         rot_err_rotvex = R.from_matrix(rot_err_mat).as_rotvec(degrees=False)
         self.state.pose_error[3:] = -rot_err_rotvex
 
-        #wrench_err = self.state.external_wrench_base - self.state.desired_wrench
         wrench_err = self.state.external_wrench_tcp - self.state.desired_wrench
-        # wrench_err = wrench_err 
-        # wrench_err[0] = wrench_err[0] * 50
-        # wrench_err[1] = wrench_err[1] * 50
-        # wrench_err[2] = wrench_err[2] * 10
         if time.time() - self.laset_print_time > 0.1:
             print(f'wrench_err: {wrench_err} ||| external_wrench_tcp: {self.state.external_wrench_tcp} ||| desired_wrench: {self.state.desired_wrench}')
         self.state.arm_desired_acc = np.linalg.inv(self.M) @ (wrench_err - self.D @ (self.state.arm_desired_twist -self.state.desired_twist) - self.K @ self.state.pose_error)
@@ -78,7 +74,8 @@ class AdmittanceController(BaseController):
         self.clip_command(self.state.arm_desired_twist,"vel")
         delta_pose = self.state.arm_desired_twist * dt
         # delta_pose[:3] = self.pos_scale_factor * delta_pose[:3]
-        delta_pose[2] = self.pos_scale_factor * delta_pose[2]
+        delta_pose[2] = self.pos_scale_factor_z * delta_pose[2]
+        delta_pose[:2] = self.pos_scale_factor_xy * delta_pose[:2]
 
         delta_pose[3:] = self.rot_scale_factor * delta_pose[3:]
         # if time.time() - self.laset_print_time > 5:

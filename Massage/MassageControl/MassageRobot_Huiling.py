@@ -101,7 +101,7 @@ class MassageRobot:
         
         self.arm = Huilin(arm_ip=arm_config['arm_ip'])
         #力传感器修改
-        self.force_sensor = XjcSensor('/dev/ttyUSB1', 115200)
+        self.force_sensor = XjcSensor('/dev/ttyUSB0', 115200)
         # self.force_sensor.connect()
 
         # #########
@@ -1540,7 +1540,7 @@ if __name__ == "__main__":
    
     signal.signal(signal.SIGINT, signal_handler)
     
-    robot.init_hardwares([ 329.90509796 ,-81.06357369  , 0, np.pi, 0, 0])
+    robot.init_hardwares([ 189.1799, -138.078 , 0, np.pi, 0, 0])
     # robot.move_to_points(1.247456,pose=[0.247,0.1043,0.761,0,0,0],is_interrupt=False)
     # traj = robot.traj_generate(1.247456,pose=[0.247,0.1043,0.761,0,0,0],interpolation='linear')
     # print(traj)

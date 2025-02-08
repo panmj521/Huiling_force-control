@@ -327,6 +327,9 @@ class XjcSensor:
     def __del__(self):
         self.disconnect()
     
+
+
+    
 if __name__ == "__main__":
     import sys
     import pathlib

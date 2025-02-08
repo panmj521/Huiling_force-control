@@ -123,7 +123,7 @@ class Huilin():
         #atexit.register(self.exit_task)
         #初始化以及关机位置，待更改
         #R1 R2 Z R4
-        self.init_pos = [10,200,108]
+        self.init_pos = [20,225,108]
         #Rot_angle
         self.init_pos_Rotagl = [30,60,30]
         # self.off_pos = [0,180,108]
@@ -136,6 +136,7 @@ class Huilin():
         self.theta2_range=(9.18, 351.57)
         self.is_exit = False
         self.move_joint(self.init_pos,0)
+        self._move_z_axis_p(0)
         self.logger.log_info("已到达机械臂运动起始位置")     
 
 
@@ -571,16 +572,18 @@ class Huilin():
 
         desire_joint, code = self.inverse_kinematic(cur, pose_command)
         self.get_inverse_kinematics_error_message(code, cur, desire_joint)
-        self._move_z_axis_p(z_command)        
+
+        self._move_z_axis_p(z_command)
+        # if code == 0:
+        #     self.move_joint(desire_joint,1)        
         if code == 0:
             delta_joint = desire_joint - cur
             steps = 100
-            step_size = delta_joint / steps
 
+            step_size = delta_joint / steps
             for i in range(steps):
                 target_joint = cur + (i + 1) * step_size
                 self.move_joint(target_joint)
-            # self._move_z_axis(z_command)
 
 
 
@@ -636,11 +639,15 @@ if __name__ == "__main__":
     # Huiling.arms_home()
     # Huiling.Z_motor.sdo_write(0x2600,0x00,int(1000).to_bytes(4, 'little', signed=True))
     # time.sleep(8)
-    pose,_ = Huiling.get_arm_position()
-    print("坐标:",pose)
+    time.sleep(0.02)
     list_param = Huiling.get_scara()
-    print(list_param)
+    print("first_param",list_param)
     
+    Huiling.robot.xyz_move(1,10,10)
+    Huiling.robot.wait_stop()
+    time.sleep(0.02)
+    list_param = Huiling.get_scara()
+    print("scond_param",list_param)
     # Huiling.move_joint([0,210,108],0)
     # Huiling.move_joint([0,220,108],0)
     # Huiling.move_joint([0,230,108],0)
