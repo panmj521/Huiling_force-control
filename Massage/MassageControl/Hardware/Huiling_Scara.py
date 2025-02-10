@@ -64,7 +64,7 @@ class Huilin():
                     #调节碰撞检测的灵敏度    
                     self.robot.set_robot_joint_torque_value(1,4000)
                     self.robot.set_robot_joint_torque_value(2,4000)    
-                    self.robot.set_robot_joint_torque_value(4,8000)
+                    self.robot.set_robot_joint_torque_value(4,10000)
                     #机械臂检测线程
                     self.monitor_arm_status()  
                     """
@@ -89,7 +89,7 @@ class Huilin():
                     #电机正反转0正转1反转
                     self.Z_motor.sdo_write(0x2607, 0x00, (0x00).to_bytes(2, 'little'))
                     #初始速度为0
-                    self.Z_motor.sdo_write(0x2600, 0x00, int(500).to_bytes(4, 'little', signed=True))
+                    self.Z_motor.sdo_write(0x2600, 0x00, int(700).to_bytes(4, 'little', signed=True))
                     #位置指令均值滤波时间 
                     self.Z_motor.sdo_write(0x2403,0x00, int(15000).to_bytes(4,'little'))                    
                     # [0]位置模式 [1]速度模式 [2]力矩模式 [3]电压模式 [4]电流模式
@@ -326,29 +326,24 @@ class Huilin():
             z_value  = 0
         # 精确转换系数：7290000/570 = 12789.4736842
         self.arm_z = z_value / 12789.4736842
-        
         # 如果位置接近0，则设为0
         if abs(self.arm_z) <= 0.1:
             self.arm_z = 0
         arm_r = self.robot.r
         arm_x = arm_x + self.L3 * np.cos((arm_r-108)*np.pi/180)
         arm_y = arm_y + self.L3 * np.sin((arm_r-108)*np.pi/180)
-        
         position = np.array([arm_x, arm_y, self.arm_z])
-        
         empty_quat = R.from_euler('xyz',[np.pi,0,((arm_r-108)*np.pi/180)], degrees=False).as_quat()
         return position, empty_quat
     
+
     def get_scara(self):
         self.robot.get_scara_param()
-        x = self.robot.x
-        y = self.robot.y
-        z = self.robot.z
-        ang1 = self.robot.angle1
-        ang2 = self.robot.angle2
-        ang4 = self.robot.r
-        list = [x,y,z,ang1,ang2,ang4]
-        return list
+        cur_angle = [self.robot.angle1,self.robot.angle2,self.robot.r]
+        end_x = self.robot.x + self.L3 * np.cos((self.robot.r-108)*np.pi/180)
+        end_y = self.robot.y + self.L3 * np.sin((self.robot.r-108)*np.pi/180)
+        cur_pos = [end_x,end_y]
+        return cur_angle, cur_pos
 
             
     #获取编码器位置
@@ -363,76 +358,153 @@ class Huilin():
         encoder_position = np.array([encoder_x, encoder_y, encoder_z])
         encoder_quat_rot = R.from_euler('z', encoder_r, degrees=True).as_quat()
         return encoder_position, encoder_quat_rot
+    #获取编码器位置 ZIWEI 25.2.1O
+    def get_position_ZIWEI(self):
+        self.robot.get_scara_param()
+        cur_x = self.robot.x + self.L3 * np.cos((self.robot.r-108)*np.pi/180)
+        cur_y = self.robot.y + self.L3 * np.sin((self.robot.r-108)*np.pi/180)
+        cur_z = self.robot.z
+        cur_r = self.robot.r
+        cur_angle1 = self.robot.angle1
+        cur_angle2 = self.robot.angle2
+
+        pos_and_ang = [cur_x, cur_y, cur_z, cur_angle1, cur_angle2, cur_r]
+        return pos_and_ang
     
     #逆运动学
-    def inverse_kinematic(self, cur_angle, position, use_numerical=True, lr=-1):
-        self.last_joint = cur_angle
+    # def inverse_kinematic(self, cur_angle, position, use_numerical=True, lr=-1):
+    #     self.last_joint = cur_angle
+    #     if use_numerical:
+    #         max_iter = 500
+    #         alpha = 0.3 #学习率
+    #         tolerance = 1e-2
+    #         solutions = []
+    #         joint_diff = np.zeros(3)  
+    #         joint_diff_thresholds = np.array([20, 30, 30])
+    #         initial_conditions = [
+    #             #当前机械臂实际位置(转角rad)
+    #             np.array([cur_angle[0], cur_angle[1] - 180, cur_angle[2] - 108])* np.pi/180,
+    #             #初始位置(转角rad)
+    #             np.array(self.init_pos_Rotagl)* np.pi/180
+    #             ]
+    #         for theta in initial_conditions:
+    #             for i in range(max_iter):
+    #                 # 正向运动学计算当前位置
+    #                 x_current = self.L1 * np.cos(theta[0]) - self.L2 * np.cos(theta[0] + theta[1]) + \
+    #                             self.L3 * np.cos(theta[2])
+    #                 y_current = self.L1 * np.sin(theta[0]) - self.L2 * np.sin(theta[0] + theta[1]) + \
+    #                             self.L3 * np.sin(theta[2])
+    #                 # 检查收敛
+    #                 error = np.array([position[0] - x_current, position[1] - y_current])
+    #                 if np.linalg.norm(error) < tolerance:
+    #                     # 计算总旋转角度
+    #                     total_rotation = np.sum(np.abs(theta))
+    #                     solutions.append((theta.copy(), total_rotation))
+    #                     break
+    #                 # 雅可比矩阵
+    #                 J = np.array([
+    #                     [-self.L1 * np.sin(theta[0]) + self.L2 * np.sin(theta[0] + theta[1]),
+    #                         self.L2 * np.sin(theta[0] + theta[1]),
+    #                         -self.L3 * np.sin(theta[2])],
+    #                     [self.L1 * np.cos(theta[0]) - self.L2 * np.cos(theta[0] + theta[1]),
+    #                         -self.L2 * np.cos(theta[0] + theta[1]),
+    #                         self.L3 * np.cos(theta[2])]
+    #                 ])
+    #                 # 计算伪逆并更新关节角度
+    #                 try:
+    #                     J_pinv = np.linalg.pinv(J)
+    #                     delta_theta = J_pinv @ error
+    #                     theta += alpha * delta_theta
+    #                 except np.linalg.LinAlgError:
+    #                     return None,3
+    #                 # 限制角度变化幅度（最大变化5度/次）
+    #                 max_delta = 5 * np.pi/180
+    #                 delta_theta = np.clip(delta_theta, -max_delta, max_delta)      
+    #                 # 更新角度并限制在允许范围内
+    #                 theta += delta_theta
+    #                 theta[0] = np.clip(theta[0], -60 * np.pi/180, 60 * np.pi/180)
+    #                 theta[1] = np.clip(theta[1], -90 * np.pi/180, 90 * np.pi/180)
+    #                 theta[2] = np.clip(theta[2], -90 * np.pi/180, 90 * np.pi/180)
+    #         if not solutions:
+    #             return None, 1             
+    #         #选择总旋转角度最小的解
+    #         # print("solutions:",solutions)
+    #         min_solution = min(solutions, key=lambda x: x[1])[0] * 180/np.pi
+    #         desire_joint = np.array([
+    #             0 + min_solution[0],  
+    #             180 + min_solution[1],  
+    #             108 + min_solution[2]  
+    #         ])
+    #         joint_diff = desire_joint - self.last_joint
+    #         if np.any(np.abs(joint_diff) >= joint_diff_thresholds):
+    #             return desire_joint, 2
+    #         # print(desire_joint)
+    #         return desire_joint, 0
+
+    def inverse_kinematic(self,cur_angle, position, use_numerical=True, lr=-1):
         if use_numerical:
             max_iter = 500
-            alpha = 0.3 #学习率
+            alpha = 0.3  # 学习率
             tolerance = 1e-2
-            solutions = []
-            joint_diff = np.zeros(3)  
-            joint_diff_thresholds = np.array([20, 30, 30])
-            initial_conditions = [
-                #当前机械臂实际位置(转角rad)
-                np.array([cur_angle[0], cur_angle[1] - 180, cur_angle[2] - 108])* np.pi/180,
-                #初始位置(转角rad)
-                np.array(self.init_pos_Rotagl)* np.pi/180
-                ]
-            for theta in initial_conditions:
-                for i in range(max_iter):
-                    # 正向运动学计算当前位置
-                    x_current = self.L1 * np.cos(theta[0]) - self.L2 * np.cos(theta[0] + theta[1]) + \
-                                self.L3 * np.cos(theta[2])
-                    y_current = self.L1 * np.sin(theta[0]) - self.L2 * np.sin(theta[0] + theta[1]) + \
-                                self.L3 * np.sin(theta[2])
-                    # 检查收敛
-                    error = np.array([position[0] - x_current, position[1] - y_current])
-                    if np.linalg.norm(error) < tolerance:
-                        # 计算总旋转角度
-                        total_rotation = np.sum(np.abs(theta))
-                        solutions.append((theta.copy(), total_rotation))
-                        break
-                    # 雅可比矩阵
-                    J = np.array([
-                        [-self.L1 * np.sin(theta[0]) + self.L2 * np.sin(theta[0] + theta[1]),
-                            self.L2 * np.sin(theta[0] + theta[1]),
-                            -self.L3 * np.sin(theta[2])],
-                        [self.L1 * np.cos(theta[0]) - self.L2 * np.cos(theta[0] + theta[1]),
-                            -self.L2 * np.cos(theta[0] + theta[1]),
-                            self.L3 * np.cos(theta[2])]
-                    ])
-                    # 计算伪逆并更新关节角度
-                    try:
-                        J_pinv = np.linalg.pinv(J)
-                        delta_theta = J_pinv @ error
-                        theta += alpha * delta_theta
-                    except np.linalg.LinAlgError:
-                        return None,3
-                    # 限制角度变化幅度（最大变化5度/次）
-                    max_delta = 5 * np.pi/180
-                    delta_theta = np.clip(delta_theta, -max_delta, max_delta)      
-                    # 更新角度并限制在允许范围内
-                    theta += delta_theta
-                    theta[0] = np.clip(theta[0], -60 * np.pi/180, 60 * np.pi/180)
-                    theta[1] = np.clip(theta[1], -90 * np.pi/180, 90 * np.pi/180)
-                    theta[2] = np.clip(theta[2], -90 * np.pi/180, 90 * np.pi/180)
-            if not solutions:
-                return None, 1             
-            #选择总旋转角度最小的解
-            # print("solutions:",solutions)
-            min_solution = min(solutions, key=lambda x: x[1])[0] * 180/np.pi
+            joint_diff_thresholds = np.array([50, 60, 60])
+            initial_conditions = np.array([cur_angle[0], \
+                                        cur_angle[1], \
+                                        360 - cur_angle[0] - cur_angle[1] + (cur_angle[2] - 108)]) \
+                                            * np.pi / 180
+            theta = initial_conditions.copy()
+            for i in range(max_iter):
+                # 正向运动学计算当前位置
+                x_current = self.L1 * np.cos(theta[0]) + \
+                            self.L2 * np.cos(theta[0] + theta[1]) +  \
+                            self.L3 * np.cos(theta[2] + theta[0] + theta[1])
+                y_current = self.L1 * np.sin(theta[0]) + \
+                            self.L2 * np.sin(theta[0] + theta[1]) +  \
+                            self.L3 * np.sin(theta[2] + theta[0] + theta[1])
+                # 检查收敛
+                error = np.array([position[0] - x_current, position[1] - y_current])
+                if np.linalg.norm(error) < tolerance:
+                    break
+                J = np.array([
+                    [-self.L1 * np.sin(theta[0]) - self.L2 * np.sin(theta[0] + theta[1]) - self.L3 * np.sin(theta[2] + theta[0] + theta[1]),\
+                    -self.L2 * np.sin(theta[0] + theta[1]) - self.L3 * np.sin(theta[2] + theta[0] + theta[1]),\
+                    -self.L3 * np.sin(theta[2] + theta[0] + theta[1])],
+                    [self.L1 * np.cos(theta[0]) + self.L2 * np.cos(theta[0] + theta[1]) + self.L3 * np.cos(theta[2] + theta[0] + theta[1]),\
+                    self.L2 * np.cos(theta[0] + theta[1]) + self.L3 * np.cos(theta[2] + theta[0] + theta[1]),\
+                    self.L3 * np.cos(theta[2] + theta[0] + theta[1])]
+                ])
+                try:
+                    J_pinv = np.linalg.pinv(J)
+                    delta_theta = J_pinv @ error
+                except np.linalg.LinAlgError:
+                    return None, 3
+                # 限制角度变化幅度（最大变化3度/次）
+                max_delta = 3 * np.pi / 180
+                delta_theta = np.clip(delta_theta, -max_delta, max_delta)
+                # 更新角度并限制在允许范围内
+                theta += alpha * delta_theta
+                theta[0] = np.clip(theta[0], -75 * np.pi / 180, 75 * np.pi / 180)
+                theta[1] = np.clip(theta[1], 30 * np.pi / 180, 330 * np.pi / 180)
+                theta[2] = np.clip(theta[2], -180 * np.pi / 180, 180 * np.pi / 180)
+            #for循环可以带一个else，当for循环正常结束时执行else，即未break时执行else
+            else:
+                self.logger.log_warning("最大迭代次数已超过，未能收敛到解")
+                return None, 1
+            min_solution = theta * 180 / np.pi
             desire_joint = np.array([
-                0 + min_solution[0],  
-                180 + min_solution[1],  
-                108 + min_solution[2]  
+                min_solution[0],
+                min_solution[1],
+                min_solution[2] + min_solution[0] + min_solution[1] -360 + 108
             ])
-            joint_diff = desire_joint - self.last_joint
+            joint_diff = desire_joint - cur_angle
             if np.any(np.abs(joint_diff) >= joint_diff_thresholds):
-                return desire_joint, 2
-            # print(desire_joint)
+                self.logger.log_warning("逆解角度过大，不符合规范")
+                print("当前角度：", cur_angle)
+                print("期望角度：", desire_joint)
+                return None, 2
             return desire_joint, 0
+        else:
+            # 非数值方法的实现（如果有的话再补充）
+            pass
 
             
     def get_inverse_kinematics_error_message(self, code,cur,desire_joint):
@@ -482,7 +554,9 @@ class Huilin():
         #移动到目标电位
         #电机使能1开启0关闭
         # self.Z_motor.sdo_write(0x2100, 0x00, (0x01).to_bytes(2, 'little'))
-        target_position = abs(target_position)
+        # target_position = abs(target_position)
+        if target_position < 0:
+            target_position = 0
         target_position = target_position * 12789.4736842
         self.Z_motor.sdo_write(0x2400, 0x00, int(target_position).to_bytes(4, 'little'))
         # time.sleep(0.01)
@@ -640,14 +714,24 @@ if __name__ == "__main__":
     # Huiling.Z_motor.sdo_write(0x2600,0x00,int(1000).to_bytes(4, 'little', signed=True))
     # time.sleep(8)
     time.sleep(0.02)
-    list_param = Huiling.get_scara()
-    print("first_param",list_param)
-    
-    Huiling.robot.xyz_move(1,10,10)
-    Huiling.robot.wait_stop()
+    cur_angle,cur_pos = Huiling.get_scara()
+    print("cur_angle",cur_angle)
+    print("cur_pos",cur_pos)
+    print("--------------")
+    desire_joint,test = Huiling.inverse_kinematic(cur_angle,[cur_pos[0]+10,cur_pos[1]+10])
+    print(desire_joint)
+    print("--------------")
+    Huiling.move_joint(desire_joint,0,15)
     time.sleep(0.02)
-    list_param = Huiling.get_scara()
-    print("scond_param",list_param)
+    cur_angle,cur_pos = Huiling.get_scara()
+    print("cur_angle",cur_angle)
+    print("cur_pos",cur_pos)
+    print("--------------")
+    # Huiling.robot.xyz_move(1,10,10)
+    # Huiling.robot.wait_stop()
+    # time.sleep(0.02)
+    # list_param = Huiling.get_scara()
+    # print("scond_param",list_param)
     # Huiling.move_joint([0,210,108],0)
     # Huiling.move_joint([0,220,108],0)
     # Huiling.move_joint([0,230,108],0)
