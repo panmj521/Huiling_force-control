@@ -116,13 +116,13 @@ class Huilin():
                 self.logger.log_error("机器人发生碰撞，无法初始化")
                 self.power_off()
                 sys.exit(0)
+
         else:
-            print("fali:40000端口号被占用")
+            self.logger.log_error("fali:40000端口号被占用")
             return -1
         #退出任务,程序正常结束执行清理任务
         #atexit.register(self.exit_task)
         #初始化以及关机位置，待更改
-        #R1 R2 Z R4
         self.init_pos = [20,225,108]
         #Rot_angle
         self.init_pos_Rotagl = [30,60,30]
@@ -156,7 +156,6 @@ class Huilin():
         )
         self.monitor_thread.start()
         self.logger.log_info("监控线程已启动")
-
     def _monitor_loop(self):
         """监控循环"""
         try:
