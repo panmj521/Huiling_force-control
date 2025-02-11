@@ -178,6 +178,7 @@ class Huilin():
             self.power_off()
             os._exit(1)
 
+
     def _check_status(self):
         """执行一次状态检查"""
         try:
