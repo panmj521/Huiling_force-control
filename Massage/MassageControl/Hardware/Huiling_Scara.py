@@ -132,7 +132,7 @@ class Huilin():
         self.L2 = 275
         self.L3 = 248
         #关节1、2的转角范围°
-        # self.cur_angle = np.array([])
+        self.cur_angle = np.array([0,180,108])
         self.theta1_range = (-95.9152, 96.1697)
         self.theta2_range=(9.18, 351.57)
         self.is_exit = False
@@ -313,7 +313,6 @@ class Huilin():
     #断电，关闭服务器
     def power_off(self):
         self.robot.close_server()
-        print(1)
 
     #末端TCP位置
     def get_arm_position(self):
@@ -448,7 +447,7 @@ class Huilin():
             max_iter = 500
             alpha = 0.3  # 学习率
             tolerance = 1e-2
-            joint_diff_thresholds = np.array([50, 60, 60])
+            joint_diff_thresholds = np.array([10,20,30])
             initial_conditions = np.array([cur_angle[0], \
                                            cur_angle[1], \
                                            360 - cur_angle[0] - cur_angle[1] + (cur_angle[2] - 108)]) \
@@ -484,9 +483,9 @@ class Huilin():
                 delta_theta = np.clip(delta_theta, -max_delta, max_delta)
                 # 更新角度并限制在允许范围内
                 theta += alpha * delta_theta
-                theta[0] = np.clip(theta[0], 10 * np.pi / 180, 20 * np.pi / 180)
-                theta[1] = np.clip(theta[1], 20 * np.pi / 180, 20 * np.pi / 180)
-                theta[2] = np.clip(theta[2], 20 * np.pi / 180, 20 * np.pi / 180)
+                theta[0] = np.clip(theta[0], -60 * np.pi / 180, 70 * np.pi / 180)
+                theta[1] = np.clip(theta[1], 30 * np.pi / 180, 330 * np.pi / 180)
+                theta[2] = np.clip(theta[2], 0* np.pi / 180, 180 * np.pi / 180)
             else:
                 self.logger.log_warning("最大迭代次数已超过，未能收敛到解")
                 return None, 1
@@ -498,7 +497,7 @@ class Huilin():
             ])
             joint_diff = desire_joint - cur_angle
             if np.any(np.abs(joint_diff) >= joint_diff_thresholds):
-                return None, 2
+                return desire_joint, 2
             else:
                 return desire_joint, 0
         else:
@@ -512,6 +511,7 @@ class Huilin():
             self.logger.log_error(f"InverseKinematics fail with code: {code}," + inverse_kinematics_error_message.get(code, "未知错误码"))
             self.logger.log_error(f'Current joint position: {cur}')
             self.logger.log_error(f'desire_joint: {desire_joint}')
+            self.robot.emergency_stop()
             self.power_off()
     #Z轴电机速度控制
     # def _move_z_axis(self, target_position,target_speed = 1000, error=1):
@@ -580,7 +580,7 @@ class Huilin():
     #         self.robot.wait_stop()
     #         # self.robot.wait_stop()
     #         return 0
-        
+    
     def move_joint(self, joint, mode = 1, mod0_v = 15):
         #模式1为小角度输入，适用于一段段的发送位置差距较小的移动
         if mode == 1:
@@ -590,13 +590,13 @@ class Huilin():
             if max_delta <= 0.01:
                 return 0
             elif 0.01 < max_delta <= 1:
-                steps = 100
+                steps = 40
             elif 1 < max_delta <= 2:
-                steps = 100
-            elif 2 < max_delta <= 3:
-                steps = 100
-            elif 3 < max_delta <= 4:
-                steps = 100
+                steps = 80
+            # elif 2 < max_delta <= 3:
+            #     steps = 100
+            # elif 3 < max_delta <= 4:
+            #     steps = 100
             else:
                 steps = 100
             step_size = delta_joint / steps
@@ -609,7 +609,7 @@ class Huilin():
             code = self.robot.new_movej_angle(joint[0],joint[1],0,joint[2],mod0_v,1)
             #待优化
             self.get_movej_error_message(code)
-            self.robot.wait_stop()
+            # self.robot.wait_stop()
             return 0
 
 
@@ -681,6 +681,9 @@ class Huilin():
         if code == 0:
             self._move_z_axis_p(z_command)
             self.move_joint(desire_joint)
+            #考虑可以采取new_movej_angle(没有试过效果),让速度很小
+            # self.move_joint(desire_joint,0,1)
+
             # delta_joint = desire_joint - cur
             # steps = 100
 
@@ -690,6 +693,7 @@ class Huilin():
             #     self.move_joint(target_joint)
         else:
             self.logger.log_error("Inverse kinematics failed, shutting down")
+            self.robot.emergency_stop()
             self.power_off()
             return -1
 
