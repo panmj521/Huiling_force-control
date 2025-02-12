@@ -584,12 +584,12 @@ class Huilin():
         #模式1为小角度输入，适用于一段段的发送位置差距较小的移动
         cur_angle = self.cur_angle.copy()
         if mode == 1:
-            delta_joint = desire_joint - cur_angle
+            delta_joint = joint - cur_angle
             steps = 100
             step_size = delta_joint / steps
             for i in range(steps):
                 target_joint = cur_angle + (i + 1) * step_size
-                self.robot.hi_position_send(joint[0],joint[1],0,joint[2])
+                self.robot.hi_position_send(target_joint[0],target_joint[1],0,target_joint[2])
             # self.robot.wait_stop()
             return 0
         #模式0为直接移动，用于初始工作位置移动到指定的地方获得其他较大角度的一的移动
@@ -600,6 +600,8 @@ class Huilin():
             self.robot.wait_stop()
             # self.robot.wait_stop()
             return 0
+
+
         
 
     def move_pose(self, pos, deg,speed =50,roughly = 1, lr= 1, wait = False):
@@ -667,14 +669,14 @@ class Huilin():
        
         if code == 0:
             self._move_z_axis_p(z_command)
+            self.move_joint(desire_joint)
+            # delta_joint = desire_joint - cur
+            # steps = 100
 
-            delta_joint = desire_joint - cur
-            steps = 100
-
-            step_size = delta_joint / steps
-            for i in range(steps):
-                target_joint = cur + (i + 1) * step_size
-                self.move_joint(target_joint)
+            # step_size = delta_joint / steps
+            # for i in range(steps):
+            #     target_joint = cur + (i + 1) * step_size
+            #     self.move_joint(target_joint)
 
         else:
             self.logger.log_error("Inverse kinematics failed, shutting down")
