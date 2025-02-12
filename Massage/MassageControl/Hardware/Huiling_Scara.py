@@ -317,6 +317,7 @@ class Huilin():
     #末端TCP位置
     def get_arm_position(self):
         self.robot.get_scara_param()
+        self.cur_angle = np.array([self.robot.angle1,self.robot.angle2,self.robot.r])
         arm_x = self.robot.x
         arm_y = self.robot.y
         #z轴方向替换成Z轴电机的位置
@@ -336,7 +337,7 @@ class Huilin():
         empty_quat = R.from_euler('xyz',[np.pi,0,((arm_r-108)*np.pi/180)], degrees=False).as_quat()
         return position, empty_quat
     
-
+    #测试用，获取机械臂当前位置
     def get_scara(self):
         self.robot.get_scara_param()
         cur_angle = [self.robot.angle1,self.robot.angle2,self.robot.r]
@@ -448,8 +449,8 @@ class Huilin():
             tolerance = 1e-2
             joint_diff_thresholds = np.array([50, 60, 60])
             initial_conditions = np.array([cur_angle[0], \
-                                        cur_angle[1], \
-                                        360 - cur_angle[0] - cur_angle[1] + (cur_angle[2] - 108)]) \
+                                           cur_angle[1], \
+                                           360 - cur_angle[0] - cur_angle[1] + (cur_angle[2] - 108)]) \
                                             * np.pi / 180
             theta = initial_conditions.copy()
             for i in range(max_iter):
@@ -485,7 +486,6 @@ class Huilin():
                 theta[0] = np.clip(theta[0], -75 * np.pi / 180, 75 * np.pi / 180)
                 theta[1] = np.clip(theta[1], 30 * np.pi / 180, 330 * np.pi / 180)
                 theta[2] = np.clip(theta[2], -180 * np.pi / 180, 180 * np.pi / 180)
-            #for循环可以带一个else，当for循环正常结束时执行else，即未break时执行else
             else:
                 self.logger.log_warning("最大迭代次数已超过，未能收敛到解")
                 return None, 1
@@ -497,16 +497,13 @@ class Huilin():
             ])
             joint_diff = desire_joint - cur_angle
             if np.any(np.abs(joint_diff) >= joint_diff_thresholds):
-                self.logger.log_warning("逆解角度过大，不符合规范")
-                print("当前角度：", cur_angle)
-                print("期望角度：", desire_joint)
                 return None, 2
-            return desire_joint, 0
+            else:
+                return desire_joint, 0
         else:
             # 非数值方法的实现（如果有的话再补充）
             pass
 
-            
     def get_inverse_kinematics_error_message(self, code,cur,desire_joint):
         if code == 0:
             self.logger.log_info(f"InverseKinematics code: {code}," + inverse_kinematics_error_message.get(code, "未知错误码"))
@@ -515,37 +512,37 @@ class Huilin():
             self.logger.log_error(f'Current joint position: {cur}')
             self.logger.log_error(f'desire_joint: {desire_joint}')
             self.power_off()
-
-    def _move_z_axis(self, target_position,target_speed = 1000, error=1):
-        if target_speed >= 0:
-            if 0 <= target_position <= 570:
-                # 读取实际位置
-                position_value = self.Z_motor.sdo_read(0x6064, 0x00)
-                position_value = int.from_bytes(position_value, byteorder='little', signed=True)
-                z_real_position = self.arm_z
-                print(1)
-                while abs(z_real_position - target_position) > error:
-                    # 读取实际位置
-                    # position_value = self.Z_motor.sdo_read(0x6064, 0x00)
-                    # position_value = int.from_bytes(position_value, byteorder='little', signed=True)
-                    # z_real_position = (position_value + 149000) / 15400
-                    z_real_position = self.arm_z
-                    if target_position > z_real_position:
-                        # 向上运动正转
-                        self.Z_motor.sdo_write(0x2600, 0x00, target_speed.to_bytes(4, 'little', signed=True))
-                    else:
-                        # 向下运动反转
-                        self.Z_motor.sdo_write(0x2600, 0x00, (-1*target_speed).to_bytes(4, 'little', signed=True))
-                # 完成任务速度置零
-                self.Z_motor.sdo_write(0x2600, 0x00, int(0).to_bytes(4, 'little', signed=True))
-                self.logger.log_info("z轴到达目标点位")
-                return 0
-            else:
-                self.logger.log_error("位置超出限制，可输入范围为[0,570]")
-                return 1
-        else:
-            self.logger.log_error("速度不能小于0")
-            return 1
+    #Z轴电机速度控制
+    # def _move_z_axis(self, target_position,target_speed = 1000, error=1):
+    #     if target_speed >= 0:
+    #         if 0 <= target_position <= 570:
+    #             # 读取实际位置
+    #             position_value = self.Z_motor.sdo_read(0x6064, 0x00)
+    #             position_value = int.from_bytes(position_value, byteorder='little', signed=True)
+    #             z_real_position = self.arm_z
+    #             print(1)
+    #             while abs(z_real_position - target_position) > error:
+    #                 # 读取实际位置
+    #                 # position_value = self.Z_motor.sdo_read(0x6064, 0x00)
+    #                 # position_value = int.from_bytes(position_value, byteorder='little', signed=True)
+    #                 # z_real_position = (position_value + 149000) / 15400
+    #                 z_real_position = self.arm_z
+    #                 if target_position > z_real_position:
+    #                     # 向上运动正转
+    #                     self.Z_motor.sdo_write(0x2600, 0x00, target_speed.to_bytes(4, 'little', signed=True))
+    #                 else:
+    #                     # 向下运动反转
+    #                     self.Z_motor.sdo_write(0x2600, 0x00, (-1*target_speed).to_bytes(4, 'little', signed=True))
+    #             # 完成任务速度置零
+    #             self.Z_motor.sdo_write(0x2600, 0x00, int(0).to_bytes(4, 'little', signed=True))
+    #             self.logger.log_info("z轴到达目标点位")
+    #             return 0
+    #         else:
+    #             self.logger.log_error("位置超出限制，可输入范围为[0,570]")
+    #             return 1
+    #     else:
+    #         self.logger.log_error("速度不能小于0")
+    #         return 1
         
     def _move_z_axis_p(self,target_position,target_speed = None):
         if target_speed:
@@ -568,10 +565,31 @@ class Huilin():
     # def move_joint_5(self,num):
     #     self.odrv0.axis0.controller.input_pos = num
     #机械臂关节运动
+    # def move_joint(self, joint, mode = 1,mod0_v = 15):
+    #     #模式1为小角度输入，适用于一段段的发送位置差距较小的移动
+    #     if mode == 1:
+    #         self.robot.hi_position_send(joint[0],joint[1],0,joint[2])
+    #         # self.robot.wait_stop()
+    #         return 0
+    #     #模式0为直接移动，用于初始工作位置移动到指定的地方获得其他较大角度的一的移动
+    #     else:
+    #         code = self.robot.new_movej_angle(joint[0],joint[1],0,joint[2],mod0_v,1)
+    #         #待优化
+    #         self.get_movej_error_message(code)
+    #         self.robot.wait_stop()
+    #         # self.robot.wait_stop()
+    #         return 0
+        
     def move_joint(self, joint, mode = 1,mod0_v = 15):
         #模式1为小角度输入，适用于一段段的发送位置差距较小的移动
+        cur_angle = self.cur_angle.copy()
         if mode == 1:
-            self.robot.hi_position_send(joint[0],joint[1],0,joint[2])
+            delta_joint = desire_joint - cur_angle
+            steps = 100
+            step_size = delta_joint / steps
+            for i in range(steps):
+                target_joint = cur_angle + (i + 1) * step_size
+                self.robot.hi_position_send(joint[0],joint[1],0,joint[2])
             # self.robot.wait_stop()
             return 0
         #模式0为直接移动，用于初始工作位置移动到指定的地方获得其他较大角度的一的移动
@@ -641,16 +659,15 @@ class Huilin():
         z_command = arm_position_command[2]
         
         
-        self.robot.get_scara_param()
-        cur = np.array([self.robot.angle1, self.robot.angle2, self.robot.r])
+        # self.robot.get_scara_param()
+        cur = self.cur_angle.copy()
 
         desire_joint, code = self.inverse_kinematic(cur, pose_command)
         self.get_inverse_kinematics_error_message(code, cur, desire_joint)
-
-        self._move_z_axis_p(z_command)
-        # if code == 0:
-        #     self.move_joint(desire_joint,1)        
+       
         if code == 0:
+            self._move_z_axis_p(z_command)
+
             delta_joint = desire_joint - cur
             steps = 100
 
@@ -659,17 +676,12 @@ class Huilin():
                 target_joint = cur + (i + 1) * step_size
                 self.move_joint(target_joint)
 
-
-
-
-
         else:
             self.logger.log_error("Inverse kinematics failed, shutting down")
             self.power_off()
             return -1
 
         
-
     def get_movej_error_message(self,code):
         if code == 1:
             self.logger.log_info(f'moveJ code: {code},' + movej_error_codes.get(code, "未知错误码"))
