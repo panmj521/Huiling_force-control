@@ -586,15 +586,15 @@ class Huilin():
         if mode == 1:
             delta_joint = joint - cur_angle
             max_delta = np.max(np.abs(delta_joint))
-            if max_delta < 0.01:
+            if max_delta <= 0.01:
                 return 0
-            elif max_delta <= 1:
+            elif 0.01 < max_delta <= 1:
                 steps = 20
-            elif max_delta <= 2:
+            elif 1 < max_delta <= 2:
                 steps = 40
-            elif max_delta <= 3:
+            elif 2 < max_delta <= 3:
                 steps = 60
-            elif max_delta <= 4:
+            elif 3 < max_delta <= 4:
                 steps = 80
             else:
                 steps = 100
