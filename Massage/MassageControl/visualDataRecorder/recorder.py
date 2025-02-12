@@ -58,27 +58,31 @@ def Q4_2_q4(params):
     q4 = Q4-108-q2-q3
     return q4
 
+def q4_2_Q4(params):
+    q4 = params[-1]
+    q2 = params[1]
+    q3 = params[2]
+    Q4 = q2+q3+q4+108
+
+
 ## 相机侧
-def capture_and_save():
+def capture_and_save(cam):
     # 获取最新的RGB和深度图像
     rgb_image, depth_image, camera_intrinsics = cam.get_latest_frame()
     print(camera_intrinsics)
 
     max_depth = np.max(depth_image)
-    print(np.min(depth_image), np.max(depth_image))
-    print(depth_image[200, 320])
+    # print(np.min(depth_image), np.max(depth_image))
+    # print(depth_image[200, 320])
     depth_image = (depth_image / max_depth * 65535).astype(np.uint16)
-    print(np.min(depth_image), np.max(depth_image))
+    # print(np.min(depth_image), np.max(depth_image))
+
     # 对图像进行水平翻转
     rgb_image = cv2.flip(rgb_image, 1)
     depth_image = cv2.flip(depth_image, 1)
 
-    # ArUco标记字典和棋盘格参数
-    aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_5X7)
-    parameters = cv2.aruco.DetectorParameters_create()
-
     # 检测ArUco标记
-    corners, ids, _ = cv2.aruco.detectMarkers(rgb_image, aruco_dict, parameters=parameters)
+    corners, ids, _ = cv2.aruco.detectMarkers(rgb_image, cv2.aruco.DICT_4X4_50, parameters=cv2.aruco.CORNER_REFINE_SUBPIX)
 
     if len(corners) > 0:
         # 绘制检测到的标记
@@ -95,17 +99,13 @@ def capture_and_save():
 
             # 显示深度信息
             print(f"Marker ID: {ids[i]} at ({x}, {y}) has depth value: {depth_value}")
-
+            
             # 可以在图像上标记深度信息
-            cv2.putText(rgb_image, f"Depth: {depth_value}", (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+            cv2.putText(rgb_image, f"Depth: {depth_value}", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
     # 显示图像
     cam.display_images(rgb_image, depth_image)
-    cv2.imwrite("color_with_aruco.png", rgb_image)
-    cv2.imwrite("depth.png", depth_image)
 
-    # 显示RGB点云
-    cam.display_rgb_point_cloud(rgb_image, depth_image, camera_intrinsics)
 ## 电机侧
 def rotate_motor():
     odrv0 = odrive.find_any()
@@ -125,6 +125,11 @@ if __name__ == '__main__':
     cam.start()
     time.sleep(0.1)
 
+    # 移动
+    my_Huilin.robot.xyz_move(1,100,10)
+    my_Huilin.robot.wait_stop()
+    time.sleep(0.02)
+
     # 记录当前正运动学姿态矩阵
     pos_and_deg = my_Huilin.get_position_ZIWEI()
     print(pos_and_deg)
@@ -134,5 +139,5 @@ if __name__ == '__main__':
     T_E2B = FK(q)
     print(T_E2B)
 
-    capture_and_save()
+    # capture_and_save()
 
