@@ -20,5 +20,6 @@ controller: ['/home/jsfb/jsfb_ws/MassageRobot_huiling/Massage/MassageControl/con
 massage_head_dir: '/home/jsfb/jsfb_ws/global_config/massage_head'
 
 control_rate: 100 #150
-sensor_rate: 250
+sensor_rate:  250
+arm_rate : 20
 command_rate: 90  #30

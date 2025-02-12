@@ -202,6 +202,7 @@ class MassageRobot:
         # 频率
         self.control_rate = Rate(arm_config['control_rate'])
         self.sensor_rate = Rate(arm_config['sensor_rate'])
+        self.arm_rate = Rate(arm_config['arm_rate'])
         self.command_rate = Rate(arm_config['command_rate'])
 
         # 低通滤波
@@ -538,6 +539,19 @@ class MassageRobot:
     def step(self,dt):
         self.controller_manager.step(dt)
 
+        
+    def sensor_measure_loop(self):
+        self.logger.log_info("力传感器测量线程启动")
+        while (not self.arm.is_exit) and (not self.exit_event.is_set()):
+            try:
+                if not self.is_waitting:
+                    # 力传感器测量
+                    self.update_wrench()
+            except Exception as e:
+                self.logger.log_error(f"传感器数据读取失败:{e}")
+                self.exit_event.set()
+            self.sensor_rate.sleep()
+
     def arm_measure_loop(self):
         self.logger.log_info("机械臂测量线程启动")
         while (not self.arm.is_exit) and (not self.exit_event.is_set()):
@@ -546,11 +560,11 @@ class MassageRobot:
                     # 机械臂测量
                     self.arm_state.arm_position,self.arm_state.arm_orientation = self.arm.get_arm_position()
                     # 力传感器测量
-                    self.update_wrench()
+                    # self.update_wrench()
             except Exception as e:
-                self.logger.log_error(f"机械臂或传感器数据读取失败:{e}")
+                self.logger.log_error(f"机械臂数据读取失败:{e}")
                 self.exit_event.set()
-            self.sensor_rate.sleep()
+            self.arm_rate.sleep()
 
     def arm_command_loop(self):
         self.logger.log_info("机械臂控制线程启动")
@@ -579,10 +593,12 @@ class MassageRobot:
         if self.exit_event.is_set():
             self.exit_event.clear()
             self.arm_measure_thread = threading.Thread(target=self.arm_measure_loop)
+            self.sensor_measure_thread = threading.Thread(target=self.sensor_measure_loop)
             self.arm_control_thread = threading.Thread(target=self.arm_command_loop)
+            
             # 线程开始
             self.arm_measure_thread.start()
-            
+            self.sensor_measure_thread.start()
             poistion ,quat_rot  = self.arm.get_arm_position()
             self.arm_state.desired_position = poistion
             self.arm_state.arm_position_command = poistion
@@ -613,6 +629,7 @@ class MassageRobot:
             #阻塞等待这两个线程结束
             self.arm_control_thread.join()
             self.arm_measure_thread.join()
+            self.sensor_measure_thread.join()
             # self.switch_payload('none')
             # self.arm.disable_servo()
             self.logger.log_info("MassageRobot停止")

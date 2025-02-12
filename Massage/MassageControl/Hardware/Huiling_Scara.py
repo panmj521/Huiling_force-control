@@ -132,6 +132,7 @@ class Huilin():
         self.L2 = 275
         self.L3 = 248
         #关节1、2的转角范围°
+        # self.cur_angle = np.array([])
         self.theta1_range = (-95.9152, 96.1697)
         self.theta2_range=(9.18, 351.57)
         self.is_exit = False
@@ -483,9 +484,9 @@ class Huilin():
                 delta_theta = np.clip(delta_theta, -max_delta, max_delta)
                 # 更新角度并限制在允许范围内
                 theta += alpha * delta_theta
-                theta[0] = np.clip(theta[0], -75 * np.pi / 180, 75 * np.pi / 180)
-                theta[1] = np.clip(theta[1], 30 * np.pi / 180, 330 * np.pi / 180)
-                theta[2] = np.clip(theta[2], -180 * np.pi / 180, 180 * np.pi / 180)
+                theta[0] = np.clip(theta[0], 10 * np.pi / 180, 20 * np.pi / 180)
+                theta[1] = np.clip(theta[1], 20 * np.pi / 180, 20 * np.pi / 180)
+                theta[2] = np.clip(theta[2], 20 * np.pi / 180, 20 * np.pi / 180)
             else:
                 self.logger.log_warning("最大迭代次数已超过，未能收敛到解")
                 return None, 1
@@ -582,20 +583,20 @@ class Huilin():
         
     def move_joint(self, joint, mode = 1, mod0_v = 15):
         #模式1为小角度输入，适用于一段段的发送位置差距较小的移动
-        cur_angle = self.cur_angle.copy()
         if mode == 1:
+            cur_angle = self.cur_angle.copy()
             delta_joint = joint - cur_angle
             max_delta = np.max(np.abs(delta_joint))
             if max_delta <= 0.01:
                 return 0
             elif 0.01 < max_delta <= 1:
-                steps = 20
+                steps = 100
             elif 1 < max_delta <= 2:
-                steps = 40
+                steps = 100
             elif 2 < max_delta <= 3:
-                steps = 60
+                steps = 100
             elif 3 < max_delta <= 4:
-                steps = 80
+                steps = 100
             else:
                 steps = 100
             step_size = delta_joint / steps
