@@ -38,13 +38,15 @@ desired_xi: 1
 pos_scale_factor_z: 700
 pos_scale_factor_xy: 650
 rot_scale_factor: 1
-mass_tran: [0.7, 0.7, 0.7]
+mass_tran: [0.7, 0.7, 0.7]  #M
+mass_tran: [2.0, 2.0, 2.0]
 mass_rot: [0.2, 0.2, 0.2]
-stiff_tran: [0.7, 0.7, 1]
+stiff_tran: [0.7, 0.7, 1]  #K
+stiff_tran: [100, 100, 100] #K
 stiff_rot: [4, 4, 4]
 # stiff_tran: [100, 100, 100]
 # stiff_rot: [1, 1, 1]
-damp_tran: [25, 25, 25]
+damp_tran: [-1, -1, -1]  #D
 damp_rot: [0.6, 0.6, 0.6]
 # damp_tran: [40, 40, 40]
 # damp_rot: [3, 3, 3]

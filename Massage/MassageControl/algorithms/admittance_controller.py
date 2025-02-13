@@ -69,7 +69,8 @@ class AdmittanceController(BaseController):
         # if time.time() - self.laset_print_time > 5:
         #     print("@@@:",wrench_err - self.D @ (self.state.arm_desired_twist -self.state.desired_twist) - self.K @ self.state.pose_error)
         # self.clip_command(self.state.arm_desired_acc,"acc")
-        self.state.arm_desired_twist = self.state.arm_desired_acc * dt + self.state.arm_desired_twist
+        # self.state.arm_desired_twist = self.state.arm_desired_acc * dt + self.state.arm_desired_twist
+        self.state.arm_desired_twist += self.state.arm_desired_acc * dt
         
         self.clip_command(self.state.arm_desired_twist,"vel")
         delta_pose = self.state.arm_desired_twist * dt
