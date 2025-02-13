@@ -573,10 +573,7 @@ class MassageRobot:
                     # print(self.arm_state.arm_position_command)
                     self.last_command_time += 1
                     print("self.arm_state.arm_position_command:",self.arm_state.arm_position_command)
-                    cur = time.time()
                     code = self.arm.send_command(self.arm_state.arm_position_command,self.arm_state.arm_orientation_command)
-                    time_cos = time.time() - cur
-                    print("time_cos",time_cos)
                     # if self.last_command_time > 10:
                     #     print("commandTime:",(time.time()-self.last_record_time)/self.last_command_time)
                     #     self.last_record_time = time.time()
