@@ -559,8 +559,6 @@ class MassageRobot:
                 if not self.is_waitting:
                     # 机械臂测量
                     self.arm_state.arm_position,self.arm_state.arm_orientation = self.arm.get_arm_position()
-                    # 力传感器测量
-                    # self.update_wrench()
             except Exception as e:
                 self.logger.log_error(f"机械臂数据读取失败:{e}")
                 self.exit_event.set()
@@ -575,7 +573,10 @@ class MassageRobot:
                     # print(self.arm_state.arm_position_command)
                     self.last_command_time += 1
                     print("self.arm_state.arm_position_command:",self.arm_state.arm_position_command)
+                    cur = time.time()
                     code = self.arm.send_command(self.arm_state.arm_position_command,self.arm_state.arm_orientation_command)
+                    time_cos = time.time() - cur
+                    print("time_cos",time_cos)
                     # if self.last_command_time > 10:
                     #     print("commandTime:",(time.time()-self.last_record_time)/self.last_command_time)
                     #     self.last_record_time = time.time()
@@ -599,19 +600,19 @@ class MassageRobot:
             # 线程开始
             self.arm_measure_thread.start()
             self.sensor_measure_thread.start()
-            # poistion ,quat_rot  = self.arm.get_arm_position()
-            # self.arm_state.desired_position = poistion
-            # self.arm_state.arm_position_command = poistion
-            # self.arm_state.desired_orientation = quat_rot
-            # self.arm_state.arm_orientation_command = quat_rot
-            # for i in range(20):
-            #     self.step(self.control_rate.to_sec())
-            #     # self.logger.log_blue(f"position command: {self.arm_state.arm_position_command}")
-            #     # self.logger.log_blue(f"orientation command: {R.from_quat(self.arm_state.arm_orientation_command).as_euler('xyz',degrees=False)}")
-            #     poistion ,quat_rot  = self.arm.get_arm_position()
-            #     # self.logger.log_blue(f"position current: {poistion}")
-            #     # self.logger.log_blue(f"orientation current: {R.from_quat(quat_rot).as_euler('xyz',degrees=False)}")
-            #     self.command_rate.sleep()
+            poistion ,quat_rot  = self.arm.get_arm_position()
+            self.arm_state.desired_position = poistion
+            self.arm_state.arm_position_command = poistion
+            self.arm_state.desired_orientation = quat_rot
+            self.arm_state.arm_orientation_command = quat_rot
+            for i in range(20):
+                self.step(self.control_rate.to_sec())
+                # self.logger.log_blue(f"position command: {self.arm_state.arm_position_command}")
+                # self.logger.log_blue(f"orientation command: {R.from_quat(self.arm_state.arm_orientation_command).as_euler('xyz',degrees=False)}")
+                poistion ,quat_rot  = self.arm.get_arm_position()
+                # self.logger.log_blue(f"position current: {poistion}")
+                # self.logger.log_blue(f"orientation current: {R.from_quat(quat_rot).as_euler('xyz',degrees=False)}")
+                self.command_rate.sleep()
             # self.arm.enable_servo()
             poistion ,quat_rot  = self.arm.get_arm_position()
             self.arm_state.desired_position = poistion

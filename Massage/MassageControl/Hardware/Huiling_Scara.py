@@ -137,6 +137,7 @@ class Huilin():
         self.theta2_range=(9.18, 351.57)
         self.is_exit = False
         self.move_joint(self.init_pos,0)
+        self.wait_stop()
         self._move_z_axis_p(0)
         self.logger.log_info("已到达机械臂运动起始位置")     
 
@@ -447,7 +448,7 @@ class Huilin():
             max_iter = 500
             alpha = 0.3  # 学习率
             tolerance = 1e-2
-            joint_diff_thresholds = np.array([10,20,30])
+            joint_diff_thresholds = np.array([10,10,10])
             initial_conditions = np.array([cur_angle[0], \
                                            cur_angle[1], \
                                            360 - cur_angle[0] - cur_angle[1] + (cur_angle[2] - 108)]) \
@@ -496,6 +497,7 @@ class Huilin():
                 min_solution[2] + min_solution[0] + min_solution[1] -360 + 108
             ])
             joint_diff = desire_joint - cur_angle
+            print("joint_diff",joint_diff)
             if np.any(np.abs(joint_diff) >= joint_diff_thresholds):
                 return desire_joint, 2
             else:
@@ -581,7 +583,7 @@ class Huilin():
     #         # self.robot.wait_stop()
     #         return 0
     
-    def move_joint(self, joint, mode = 1, mod0_v = 15):
+    def move_joint(self, joint, mode = 1, speed = 15):
         #模式1为小角度输入，适用于一段段的发送位置差距较小的移动
         if mode == 1:
             cur_angle = self.cur_angle.copy()
@@ -590,9 +592,9 @@ class Huilin():
             if max_delta <= 0.01:
                 return 0
             elif 0.01 < max_delta <= 1:
-                steps = 40
-            elif 1 < max_delta <= 2:
-                steps = 80
+                steps = 50
+            # elif 1 < max_delta <= 2:
+            #     steps = 80
             # elif 2 < max_delta <= 3:
             #     steps = 100
             # elif 3 < max_delta <= 4:
@@ -606,7 +608,7 @@ class Huilin():
             return 0
         #模式0为直接移动，用于初始工作位置移动到指定的地方获得其他较大角度的一的移动
         else:
-            code = self.robot.new_movej_angle(joint[0],joint[1],0,joint[2],mod0_v,1)
+            code = self.robot.new_movej_angle(joint[0],joint[1],0,joint[2],speed,1)
             #待优化
             self.get_movej_error_message(code)
             # self.robot.wait_stop()
@@ -679,18 +681,13 @@ class Huilin():
         self.get_inverse_kinematics_error_message(code, cur, desire_joint)
        
         if code == 0:
+            # if np.max(joint_diff) > 0.01:
             self._move_z_axis_p(z_command)
             self.move_joint(desire_joint)
-            #考虑可以采取new_movej_angle(没有试过效果),让速度很小
-            # self.move_joint(desire_joint,0,1)
+            # # 考虑可以采取new_movej_angle(没有试过效果),让速度很小
+            # self.move_joint(desire_joint,0,0.1)
 
-            # delta_joint = desire_joint - cur
-            # steps = 100
 
-            # step_size = delta_joint / steps
-            # for i in range(steps):
-            #     target_joint = cur + (i + 1) * step_size
-            #     self.move_joint(target_joint)
         else:
             self.logger.log_error("Inverse kinematics failed, shutting down")
             self.robot.emergency_stop()
@@ -703,15 +700,11 @@ class Huilin():
             self.logger.log_info(f'moveJ code: {code},' + movej_error_codes.get(code, "未知错误码"))
             return 0
         else:
-            #发生碰撞则直接停机
-            if code == 102:
-                self.robot.emergency_stop()
-                self.power_off()
-                self.logger.log_error(f"moveJ failed with code: {code}, "+movej_error_codes.get(code, "未知错误码"))
-                return -1
             self.logger.log_error(f"moveJ failed with code: {code}, "+movej_error_codes.get(code, "未知错误码"))
+            self.robot.emergency_stop()
+            self.power_off()
             return -1
-           
+
     def wait_stop(self):
         state = self.robot.wait_stop()
         if state:

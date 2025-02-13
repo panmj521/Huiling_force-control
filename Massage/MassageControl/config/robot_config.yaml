@@ -19,7 +19,7 @@ controller: ['/home/jsfb/jsfb_ws/MassageRobot_huiling/Massage/MassageControl/con
 # 按摩头文件夹
 massage_head_dir: '/home/jsfb/jsfb_ws/global_config/massage_head'
 
-control_rate: 40 #机械臂控制频率要比读取状态频率低
+control_rate: 60 #机械臂控制频率要比读取状态频率低
 sensor_rate:  250  #力传感器读取频率固定250hz
 arm_rate : 50   #机械臂读取状态频率最大20hz   #最大50hz先试试
 command_rate: 90  #30

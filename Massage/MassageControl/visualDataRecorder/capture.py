@@ -29,7 +29,7 @@ def FK(params):
         [0,0,248,0,0], # 4
         [0,0,0,0,0] # 5 暂时不设置旋转
     ])
-    z,q2,q3,q4 = params
+    z,q2,q3,q4= params
     q2*=np.pi/180
     q3*=np.pi/180
     q4*=np.pi/180
@@ -175,7 +175,7 @@ def capture_and_save(cam,gridboard):
         rvec = None
         tvec = None
 
-        num, rvec, tvec= cv2.aruco.estimatePoseBoard(valid_3d_points, valid_ids, gridboard, camera_matrix, dist_coeffs, rvec, tvec)
+        num, rvec, tvec= cv2.aruco.estimatePoseBoard(valid_corners, valid_ids, gridboard, camera_matrix, dist_coeffs, rvec, tvec)
         print(num)
         if num:
             # 绘制标定板的位置和方向
@@ -277,13 +277,13 @@ def tsai_lenz(A_list, B_list):
     
     return X
 
-def save_T_robot_to_file(T, filename="T_E2B_data.txt"):
+def save_T_robot_to_file(T, filename):
     """
     将4x4齐次变换矩阵 T 保存到 txt 文件，并支持追加写入。
     :param T: 4x4 变换矩阵 (numpy array)
     :param filename: 存储的文件名，默认为 "T_E2B_data.txt"
     """
-    filename = "/home/jsfb/jsfb_ws/MassageRobot_huiling/Massage/MassageControl/visualDataRecorder/" + filename
+    absolute_filename = "/home/jsfb/jsfb_ws/MassageRobot_huiling/Massage/MassageControl/visualDataRecorder/" + filename
     if T.shape != (4, 4):
         raise ValueError("输入的 T 必须是 4x4 变换矩阵")
     
@@ -291,15 +291,15 @@ def save_T_robot_to_file(T, filename="T_E2B_data.txt"):
     T_flat = T.flatten()
     
     # 判断文件是否存在
-    if not os.path.exists(filename):
+    if not os.path.exists(absolute_filename):
         # 如果文件不存在，写入新的数据
-        np.savetxt(filename, [T_flat], delimiter=",", fmt="%.6f")
+        np.savetxt(absolute_filename, [T_flat], delimiter=",", fmt="%.6f")
     else:
         # 如果文件已存在，追加数据
-        with open(filename, "a") as f:
+        with open(absolute_filename, "a") as f:
             np.savetxt(f, [T_flat], delimiter=",", fmt="%.6f")
 
-    print(f"变换矩阵 T 已成功追加保存至 {filename}")
+    print(f"变换矩阵 T 已成功追加保存至 {absolute_filename}")
 
 def load_T_robot_from_file(filename="T_E2B_data.txt"):
     """
@@ -324,12 +324,26 @@ def load_T_robot_from_file(filename="T_E2B_data.txt"):
 
 if __name__ == '__main__':
     # robot
-    # my_Huilin = Huilin()
-    # time.sleep(0.02)
+    my_Huilin = Huilin()
+    time.sleep(0.02)
     # cam
     cam = ToolCamera(host='127.0.0.1')
     cam.start()
     time.sleep(0.1)
+    # motor
+    # odrv0 = odrive.find_any()
+    # odrv0.axis0.controller.config.control_mode=odrive.utils.ControlMode.POSITION_CONTROL
+    # odrv0.axis0.controller.config.input_mode=odrive.utils.InputMode.POS_FILTER
+    # odrv0.axis0.requested_state=odrive.utils.AxisState.CLOSED_LOOP_CONTROL
+    # 末端轴旋转
+    #####################
+    input_pos = 0
+    ###################
+    # odrv0.axis0.controller.input_pos = input_pos
+    q5_deg = (input_pos-0.5)*(-45)
+    print("q5_deg:", q5_deg)
+    q5 = (input_pos-0.5)*(-np.pi/4)
+    time.sleep(1)
 
     markers_x = 7
     markers_y = 5
@@ -346,25 +360,57 @@ if __name__ == '__main__':
     # cv2.imshow('GridBoard', img_grid_board)
     # cv2.waitKey(0)
     # cv2.destroyAllWindows()
-
+    ###################################
     # 移动
-    # my_Huilin.robot.xyz_move(1,100,10)
-    # my_Huilin.robot.wait_stop()
-    # my_Huilin.robot.xyz_move(2,50,10)
-    # my_Huilin.robot.wait_stop()
-    # time.sleep(0.02)
-
+    my_Huilin.robot.xyz_move(1,90,10)
+    my_Huilin.robot.wait_stop()
+    my_Huilin.robot.xyz_move(2,-80,10)
+    my_Huilin.robot.wait_stop()
+    time.sleep(0.5)
+    ###################################
     # 记录当前正运动学姿态矩阵
-    # pos_and_deg = my_Huilin.get_position_ZIWEI()
-    # print(pos_and_deg)
-    # q4 = Q4_2_q4(pos_and_deg[-4:])
-    # q = pos_and_deg[2:5]
-    # q.append(q4)
-    # T_E2B = FK(q)
+    pos_and_deg = my_Huilin.get_position_ZIWEI()
+    print(pos_and_deg)
+    q4 = Q4_2_q4(pos_and_deg[-4:])
+    q = pos_and_deg[2:5]
+    q.append(q4)
+    T_E2B = FK(q)
     # print(T_E2B)
-    # save_T_robot_to_file(T_E2B)
+    
+    t_1 = np.array([
+            [0,0,1,0],
+            [0,1,0,0],
+            [-1,0,0,0],
+            [0,0,0,1]
+        ]) # t 表示相邻坐标系的坐标变换
+    t_2 = np.array([
+            [np.cos(q5), -np.sin(q5), 0, 0],
+            [np.sin(q5), np.cos(q5), 0, 0],
+            [0, 0, 1, 0],
+            [0,0,0,1]])
+    
+    T_E2B = np.dot(T_E2B,t_1)
+    T_E2B = np.dot(T_E2B,t_2)
+    print(T_E2B)
+    save_T_robot_to_file(T_E2B,"T_E2B_data.txt")
 
     capture_and_save(cam,grid_board)
+
+    # 1. 90 pos=0.5(垂直无旋转)
+    # 2. 90 pos=0.6
+    # 3. 90 pos=0.7
+    # 4. 90 pos=0.4
+    # 5. 90 -10 0.5
+    # 6. 90 -10 0.4
+    # 7. 90 -20 0.3
+    # 8. 90 10 0.5
+    # 9. 90 10 0.6
+    # 10. 90 20 0.7
+
+    # 8. (1, 90,10)
+    # 9. (1, 90,10) (2,10,10)
+    # 10. (1, 90,10) (2,-10,10)
+
 
     # # 给定的旋转向量
     # rotation_vector = np.array([[-0.0911708], [-0.24094092], [0.10618752]])
