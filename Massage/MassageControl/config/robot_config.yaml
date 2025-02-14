@@ -26,7 +26,7 @@ massage_head_dir: '/home/jsfb/jsfb_ws/global_config/massage_head'
 
 
 
-control_rate: 100     # dt = 0.01s
+control_rate: 100     # dt = 0.01s  后续考虑应该调整到20hz
 sensor_rate: 250      
 arm_rate: 100         # 提高到100Hz
 command_rate: 100     

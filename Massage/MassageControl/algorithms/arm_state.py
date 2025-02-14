@@ -43,3 +43,6 @@ class ArmState:
         self.max_dx = 0.01 *1.5
         self.max_dr = 0.0087 * 3*1.5
 
+        #梯形积分项
+        self.last_acc = np.zeros(6,dtype=np.float64)
+

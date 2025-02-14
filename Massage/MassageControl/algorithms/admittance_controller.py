@@ -57,47 +57,56 @@ class AdmittanceController(BaseController):
         # print(f'rot_err_mat: {rot_err_mat} ||| arm_orientation: {R.from_quat(self.state.arm_orientation).as_euler('xyz',False)} ||| desired_orientation: {R.from_quat(self.state.desired_orientation).as_euler('xyz',False)}')
         rot_err_rotvex = R.from_matrix(rot_err_mat).as_rotvec(degrees=False)
         self.state.pose_error[3:] = -rot_err_rotvex
-
         wrench_err = self.state.external_wrench_tcp - self.state.desired_wrench
         if time.time() - self.laset_print_time > 0.1:
             print(f'wrench_err: {wrench_err} ||| external_wrench_tcp: {self.state.external_wrench_tcp} ||| desired_wrench: {self.state.desired_wrench}')
-        self.state.arm_desired_acc = np.linalg.inv(self.M) @ (wrench_err - self.D @ (self.state.arm_desired_twist -self.state.desired_twist) - self.K @ self.state.pose_error)
-        # self.state.arm_desired_acc = np.linalg.inv(self.M) @ (wrench_err - self.D @ (self.state.arm_desired_twist -self.state.desired_twist) - self.K @ self.state.pose_error)
-
-
-
-        # if time.time() - self.laset_print_time > 5:
-        #     print("@@@:",wrench_err - self.D @ (self.state.arm_desired_twist -self.state.desired_twist) - self.K @ self.state.pose_error)
-        # self.clip_command(self.state.arm_desired_acc,"acc")
-        # self.state.arm_desired_twist = self.state.arm_desired_acc * dt + self.state.arm_desired_twist
-        self.state.arm_desired_twist += self.state.arm_desired_acc * dt
         
-        self.clip_command(self.state.arm_desired_twist,"vel")
+        self.state.arm_desired_acc = np.linalg.inv(self.M) @ (wrench_err - self.D @ (self.state.arm_desired_twist -self.state.desired_twist) - self.K @ self.state.pose_error)
+        # 欧拉积分(原始采用的办法)(一阶近似)对应dt = 0.01影响较小，但dt = 0.05影响较大
+        # self.clip_command(self.state.arm_desired_acc,"acc")
+        self.state.arm_desired_twist += self.state.arm_desired_acc * dt
+        self.clip_command(self.state.arm_desired_twist,"vel",is_print=True)
         delta_pose = self.state.arm_desired_twist * dt
-        # delta_pose[:3] = self.pos_scale_factor * delta_pose[:3]
+
         delta_pose[2] = self.pos_scale_factor_z * delta_pose[2]
         delta_pose[:2] = self.pos_scale_factor_xy * delta_pose[:2]
 
         delta_pose[3:] = self.rot_scale_factor * delta_pose[3:]
-        # if time.time() - self.laset_print_time > 5:
-        #     print("delta_pose:",delta_pose)
-        
-        delta_pose[:3] = R.from_quat(self.state.arm_orientation).as_matrix() @ delta_pose[:3]
-        # if time.time() - self.laset_print_time > 5:
-        #     print("tf_delta_pose:",delta_pose)
-        # self.clip_command(delta_pose,"pose")
-        # testlsy
-        delta_ori_mat = R.from_rotvec(delta_pose[3:]).as_matrix()
+        # delta_pose[:3] = R.from_quat(self.state.arm_orientation).as_matrix() @ delta_pose[:3]
 
-        #arm_ori_mat = delta_ori_mat @ R.from_quat(self.state.arm_orientation).as_matrix()
-        arm_ori_mat = R.from_quat(self.state.arm_orientation).as_matrix() @ delta_ori_mat 
-        self.state.arm_orientation_command = R.from_matrix(arm_ori_mat).as_quat()
+        # delta_ori_mat = R.from_rotvec(delta_pose[3:]).as_matrix()
 
-        # arm_ori_mat = R.from_quat(self.state.arm_orientation).as_rotvec(degrees=False) + delta_pose[3:]
-        # self.state.arm_orientation_command = R.from_rotvec(arm_ori_mat).as_quat()
-        
-        # self.state.arm_orientation_command = R.from_matrix(arm_ori_mat).as_quat()
+        # arm_ori_mat = R.from_quat(self.state.arm_orientation).as_matrix() @ delta_ori_mat 
         self.state.arm_position_command = self.state.arm_position + delta_pose[:3]
+
+        # #梯形积分(二阶近似)对应dt较大的情况， 二阶近似比一阶近似更稳定
+        # self.state.arm_desired_twist += 0.5 * (self.state.arm_desired_acc + self.state.last_acc) * dt
+        # self.clip_command(self.state.arm_desired_twist,"vel",is_print=True)
+
+        # delta_pose = self.state.arm_desired_twist * dt
+        # #更新梯形积分项
+        # self.state.last_acc = self.state.arm_desired_acc.copy()
+
+        # delta_pose[2] = self.pos_scale_factor_z * delta_pose[2]
+        # delta_pose[:2] = self.pos_scale_factor_xy * delta_pose[:2]
+
+        # delta_pose[3:] = self.rot_scale_factor * delta_pose[3:]
+        # delta_pose[:3] = R.from_quat(self.state.arm_orientation).as_matrix() @ delta_pose[:3]
+
+        # delta_ori_mat = R.from_rotvec(delta_pose[3:]).as_matrix()
+
+        # arm_ori_mat = R.from_quat(self.state.arm_orientation).as_matrix() @ delta_ori_mat 
+        # self.state.arm_position_command = self.state.arm_position + delta_pose[:3]
+
+
+        
+        
+
+ 
+
+
+
+
         if time.time() - self.laset_print_time > 0.1:
             print("-------------admittance_1-------------------------------")
             print("arm_position:",self.state.arm_position)
