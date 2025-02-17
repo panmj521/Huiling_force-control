@@ -238,6 +238,7 @@ class MassageRobot:
         self.last_print_time = 0
         self.last_record_time = 0
         self.last_command_time = 0
+        self.last_command_time_z = 0
         self.move_to_point_count = 0
         
 
@@ -587,12 +588,37 @@ class MassageRobot:
                 self.exit_event.set()
             self.control_rate.sleep()
 
+    def arm_command_loop_z(self):
+        self.logger.log_info("机械臂z轴升降控制线程启动")
+        while (not self.arm.is_exit) and (not self.exit_event.is_set()):
+            try:
+                if not self.is_waitting:
+                    self.step(self.control_rate.to_sec())
+                    # print(self.arm_state.arm_position_command)
+                    self.last_command_time_z += 1
+                    print("self.arm_state.arm_position_command[2]:",self.arm_state.arm_position_command[2])
+                    code = self.arm.send_command_z(self.arm_state.arm_position_command)
+                    # if self.last_command_time > 10:
+                    #     print("commandTime:",(time.time()-self.last_record_time)/self.last_command_time)
+                    #     self.last_record_time = time.time()
+                    #     self.last_command_time = 0
+                    if code == -1:
+                        self.logger.log_error("机械臂急停")
+                        self.stop()
+                        break
+            except Exception as e:
+                self.logger.log_error(f"机械臂z轴控制失败:{e}")
+                self.exit_event.set()
+            self.control_rate.sleep()
+
     def start(self):
         if self.exit_event.is_set():
             self.exit_event.clear()
             self.arm_measure_thread = threading.Thread(target=self.arm_measure_loop)
             self.sensor_measure_thread = threading.Thread(target=self.sensor_measure_loop)
             self.arm_control_thread = threading.Thread(target=self.arm_command_loop)
+            self.arm_control_thread_z = threading.Thread(target=self.arm_command_loop_z)
+
             
             # 线程开始
             self.arm_measure_thread.start()
@@ -617,6 +643,8 @@ class MassageRobot:
             self.arm_state.desired_orientation = quat_rot
             self.arm_state.arm_orientation_command = quat_rot
             self.arm_control_thread.start()
+            self.arm_control_thread_z.start()
+
             self.logger.log_info("MassageRobot启动")
             time.sleep(1)
 
@@ -626,6 +654,7 @@ class MassageRobot:
             # self.arm.move_joint(self.arm.init_pos,wait=True)
             #阻塞等待这两个线程结束
             self.arm_control_thread.join()
+            self.arm_control_thread_z.join()
             self.arm_measure_thread.join()
             self.sensor_measure_thread.join()
             # self.switch_payload('none')
