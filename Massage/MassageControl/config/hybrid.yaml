@@ -19,11 +19,11 @@ desired_xi: 1.0
 
 
 # 力控参数
-force_mass: 2.5
-force_damp: 25
-Kp_force: 0.6
-Kd_force: 0.0
-Ki_force: 0.0
+force_mass: 1.5
+force_damp: 5
+Kp_force: 5
+Kd_force: 0.1
+Ki_force: 0.1
 
 # 位控参数
 Kp: [70,70]

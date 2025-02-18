@@ -94,6 +94,8 @@ class HybridController(BaseController):
         
         # z方向力控制
         force_err = self.state.external_wrench_tcp[2] - self.state.desired_wrench[2]
+        if time.time() - self.laset_print_time > 0.1:
+            print(f'wrench_err: {force_err} ||| external_wrench_tcp: {self.state.external_wrench_tcp} ||| desired_wrench: {self.state.desired_wrench}')
         self.e_t2 = self.e_t1
         self.e_t1 = self.e_t
         self.e_t = force_err
@@ -104,9 +106,9 @@ class HybridController(BaseController):
         # 位控制
         self.state.arm_desired_acc[:2] = -self.Kd @ self.state.arm_desired_twist[:2] - self.Kp @ self.state.pose_error[:2] - self.Ki @ self.pose_integral_error[:2]
 
-        self.clip_command(self.state.arm_desired_acc,"acc")
+        # self.clip_command(self.state.arm_desired_acc,"acc")
         self.state.arm_desired_twist = self.state.arm_desired_acc * dt + self.state.arm_desired_twist
-        self.clip_command(self.state.arm_desired_twist,"vel")
+        # self.clip_command(self.state.arm_desired_twist,"vel")
 
         delta_pose = self.state.arm_desired_twist * dt
 
@@ -114,7 +116,7 @@ class HybridController(BaseController):
         delta_pose[:3] = R.from_quat(self.state.arm_orientation).as_matrix() @ delta_pose[:3]
         #delta_pose[:3] = b_rotation_s @ delta_pose[:3] # 这里本身位置误差即为基坐标系下的误差，所以不需要再乘上旋转矩阵
 
-        self.clip_command(delta_pose,"pose")
+        # self.clip_command(delta_pose,"pose")
 
         delta_ori_mat = R.from_rotvec(delta_pose[3:]).as_matrix()
         #arm_ori_mat = delta_ori_mat @ R.from_quat(self.state.arm_orientation).as_matrix()
@@ -123,16 +125,16 @@ class HybridController(BaseController):
         self.state.arm_orientation_command = R.from_matrix(arm_ori_mat).as_quat()
         self.state.arm_position_command = self.state.arm_position + delta_pose[:3]
 
-        # if time.time() - self.laset_print_time > 0.2:
-        #     print("-----------------hybrid1-------------------------------")
-        #     print("arm_position:",self.state.arm_position)
-        #     print("desired_position:",self.state.desired_position)
-        #     print("arm_orientation",R.from_quat(self.state.arm_orientation).as_euler('xyz',degrees=True))
-        #     print("desired_orientation",R.from_quat(self.state.desired_orientation).as_euler('xyz',degrees=True))
-        #     print("arm_position_command",self.state.arm_position_command)
-        #     print("arm_orientation_command",R.from_quat(self.state.arm_orientation_command).as_euler('xyz',degrees=True))
-        #     print("delta_pose:",delta_pose)
-        #     self.laset_print_time = time.time()
+        if time.time() - self.laset_print_time > 0.1:
+            print("-----------------hybrid1-------------------------------")
+            print("arm_position:",self.state.arm_position)
+            print("desired_position:",self.state.desired_position)
+            # print("arm_orientation",R.from_quat(self.state.arm_orientation).as_euler('xyz',degrees=True))
+            # print("desired_orientation",R.from_quat(self.state.desired_orientation).as_euler('xyz',degrees=True))
+            print("arm_position_command",self.state.arm_position_command)
+            # print("arm_orientation_command",R.from_quat(self.state.arm_orientation_command).as_euler('xyz',degrees=True))
+            print("delta_pose:",delta_pose)
+            self.laset_print_time = time.time()
 
 
 

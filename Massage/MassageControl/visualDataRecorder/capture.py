@@ -92,18 +92,18 @@ if __name__ == '__main__':
     ###################################
     # Z轴先转动
     # def new_movej_angle(self, goal_angle1, goal_angle2, goal_z, goal_r, speed,roughly) deg deg mm deg mm/s deg/s
-    my_Huilin.move_joint([20,225,128],0)
+    my_Huilin.move_joint([20,225,108],0)
     time.sleep(0.1)
     # 位置相对移动
     my_Huilin.robot.xyz_move(1,80,10)
     my_Huilin.robot.wait_stop()
-    my_Huilin.robot.xyz_move(2,20,10)
-    my_Huilin.robot.wait_stop()
+    # my_Huilin.robot.xyz_move(2,20,10)
+    # my_Huilin.robot.wait_stop()
     time.sleep(0.5)
     ###################################
     # X轴旋转
     #####################
-    input_pos = 5 # 4.5为原点， 大于4.5为反转，小于为正转
+    input_pos = 4.5 # 4.5为原点， 大于4.5为反转，小于为正转
     ###################
     odrv0.axis0.controller.input_pos = input_pos
     time.sleep(4)

@@ -200,8 +200,8 @@ class MassageRobot:
 
 
         # 频率
-        self.xy_control_rate = Rate(arm_config['control_rate'])
-        self.z_control_rate = Rate(arm_config['z_control_rate'])
+        self.xy_control_rate = Rate(arm_config['xy_control_rate'])
+        self.z_control_rate = Rate(arm_config['control_rate'])
         self.sensor_rate = Rate(arm_config['sensor_rate'])
         self.arm_rate = Rate(arm_config['arm_rate'])
         self.command_rate = Rate(arm_config['command_rate'])
@@ -593,7 +593,7 @@ class MassageRobot:
         while (not self.arm.is_exit) and (not self.exit_event.is_set()):
             try:
                 if not self.is_waitting:
-                    # self.step(self.control_rate.to_sec())
+                    # self.step(self.z_control_rate.to_sec())
                     # print(self.arm_state.arm_position_command)
                     self.last_command_time += 1
                     print("self.arm_state.arm_position_command[:2]:",self.arm_state.arm_position_command[:2])
@@ -639,8 +639,8 @@ class MassageRobot:
             self.exit_event.clear()
             self.arm_measure_thread = threading.Thread(target=self.arm_measure_loop)
             self.sensor_measure_thread = threading.Thread(target=self.sensor_measure_loop)
-            self.arm_control_thread = threading.Thread(target=self.arm_command_loop)
             self.arm_control_thread_z = threading.Thread(target=self.arm_command_loop_z)
+            self.arm_control_thread = threading.Thread(target=self.arm_command_loop)
 
             
             # 线程开始
@@ -652,7 +652,7 @@ class MassageRobot:
             self.arm_state.desired_orientation = quat_rot
             self.arm_state.arm_orientation_command = quat_rot
             for i in range(20):
-                self.step(self.control_rate.to_sec())
+                self.step(self.z_control_rate.to_sec())
                 # self.logger.log_blue(f"position command: {self.arm_state.arm_position_command}")
                 # self.logger.log_blue(f"orientation command: {R.from_quat(self.arm_state.arm_orientation_command).as_euler('xyz',degrees=False)}")
                 poistion ,quat_rot  = self.arm.get_arm_position()
@@ -1607,7 +1607,7 @@ if __name__ == "__main__":
    
     signal.signal(signal.SIGINT, signal_handler)
     
-    robot.init_hardwares([ 189.1799, -138.078 , 0, np.pi, 0, 0])
+    robot.init_hardwares([ 437.1799, -138.0781 , 0, np.pi, 0, 0])
     # robot.move_to_points(1.247456,pose=[0.247,0.1043,0.761,0,0,0],is_interrupt=False)
     # traj = robot.traj_generate(1.247456,pose=[0.247,0.1043,0.761,0,0,0],interpolation='linear')
     # print(traj)
@@ -1620,8 +1620,8 @@ if __name__ == "__main__":
     robot.switch_payload('none')
     # robot.switch_payload('wash_head')
 
-    robot.controller_manager.switch_controller('admittance')
-    # robot.controller_manager.switch_controller('hybridPid')
+    # robot.controller_manager.switch_controller('admittance')
+    robot.controller_manager.switch_controller('hybrid')
 
     # robot.arm_state.desired_wrench = np.array([0])
 

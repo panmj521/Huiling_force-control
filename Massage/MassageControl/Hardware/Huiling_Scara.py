@@ -64,7 +64,7 @@ class Huilin():
                     #调节碰撞检测的灵敏度    
                     self.robot.set_robot_joint_torque_value(1,4000)
                     self.robot.set_robot_joint_torque_value(2,4000)    
-                    self.robot.set_robot_joint_torque_value(4,10000)
+                    self.robot.set_robot_joint_torque_value(4,4000)
                     #机械臂检测线程
                     self.monitor_arm_status()  
                     """
@@ -89,9 +89,9 @@ class Huilin():
                     #电机正反转0正转1反转
                     self.Z_motor.sdo_write(0x2607, 0x00, (0x00).to_bytes(2, 'little'))
                     #初始速度为0
-                    self.Z_motor.sdo_write(0x2600, 0x00, int(700).to_bytes(4, 'little', signed=True))
+                    self.Z_motor.sdo_write(0x2600, 0x00, int(500).to_bytes(4, 'little', signed=True))
                     #位置指令均值滤波时间 
-                    self.Z_motor.sdo_write(0x2403,0x00, int(15000).to_bytes(4,'little'))                    
+                    self.Z_motor.sdo_write(0x2403,0x00, int(20000).to_bytes(4,'little'))                    
                     # [0]位置模式 [1]速度模式 [2]力矩模式 [3]电压模式 [4]电流模式
                     self.Z_motor.sdo_write(0x2101, 0x00, (0x00).to_bytes(2, 'little'))
                     #[0]增量模式 [1]绝对值模式 用于区分PP模式下位置指令是增量值还是绝对值
@@ -509,7 +509,8 @@ class Huilin():
 
     def get_inverse_kinematics_error_message(self, code,cur,desire_joint):
         if code == 0:
-            self.logger.log_info(f"InverseKinematics code: {code}," + inverse_kinematics_error_message.get(code, "未知错误码"))
+            pass
+            # self.logger.log_info(f"InverseKinematics code: {code}," + inverse_kinematics_error_message.get(code, "未知错误码"))
         elif code != 0:
             self.logger.log_error(f"InverseKinematics fail with code: {code}," + inverse_kinematics_error_message.get(code, "未知错误码"))
             self.logger.log_error(f'Current joint position: {cur}')
@@ -555,7 +556,9 @@ class Huilin():
         #移动到目标电位
         #电机使能1开启0关闭
         # self.Z_motor.sdo_write(0x2100, 0x00, (0x01).to_bytes(2, 'little'))
-        # target_position = abs(target_position)
+        # if target_position < 0:
+        #     target_position = 0
+        target_position = abs(target_position)
         target_position = target_position * 12789.4736842
         self.Z_motor.sdo_write(0x2400, 0x00, int(target_position).to_bytes(4, 'little'))
         # time.sleep(0.01)
@@ -627,46 +630,6 @@ class Huilin():
             self.power_off()
             return -1
          
-    # def send_command(self, arm_position_command, arm_orientation_command):
-    #     # rot_euler = R.from_quat(arm_orientation_command).as_euler('z', degrees=False)
-    #     # rot_euler = np.clip(rot_euler,-3.1415,3.1415)
-    #     pose_command = arm_position_command[:2]
-    #     print("send_command中的", pose_command)
-    #     z_command = arm_position_command[2]
-    #     #获得当前关节角度
-    #     self.robot.get_scara_param()
-    #     cur = np.array([self.robot.angle1, self.robot.angle2, self.robot.r])
-    #     #逆运动学解算
-    #     desire_joint, code = self.inverse_kinematic(cur, pose_command)
-    #     self.get_inverse_kinematics_error_message(code, cur, desire_joint)
-
-    #     if code == 0:
-    #         #单开一个Z轴移动的线程，确保不会阻塞
-    #         stop_event = threading.Event()
-    #         z_thread = threading.Thread(
-    #             target=self._move_z_axis,
-    #             args=(z_command,stop_event,2000),
-    #             daemon=False
-    #         )                  
-    #         z_thread.start()
-    #         delta_joint = desire_joint - cur
-    #         steps = 30
-    #         step_size = delta_joint / steps
-    #         for i in range(steps):
-    #             if stop_event.is_set():
-    #                 self.logger.log_error("Z-axis movement failed")
-    #                 return -1
-    #             target_joint = cur + (i+1)*step_size
-    #             self.move_joint(target_joint)
-    #         stop_event.set()
-    #         # Wait for Z-axis thread to complete
-    #         z_thread.join(timeout=10.0)  # Increased timeout from 5.0 to 10.0 seconds
-    #         if z_thread.is_alive():
-    #             self.logger.log_warning("Z-axis movement timed out after 10 seconds")
-    #     else:
-    #         print("inverse_error_arm_is_exit")
-    #         self.power_off()
-    #         return -1
 
     def send_command(self, arm_position_command, arm_orientation_command):
         pose_command = arm_position_command[:2]
@@ -694,15 +657,16 @@ class Huilin():
         if z_command < 0:
             z_command = 0
         self._move_z_axis_p(z_command)
-        #读取当前位置是否写入
-        cur_pos = int.from_bytes(self.Z_motor.sdo_read(0x2400, 0x00),
-                                 byteorder='little',
-                                 signed=False)
-        if cur_pos != z_command:
-            self.logger.log_error("Z轴电机位置写入失败")
-            return -1
-
-
+        # #读取当前位置是否写入
+        # cur_pos = int.from_bytes(self.Z_motor.sdo_read(0x2400, 0x00),
+        #                          byteorder='little',
+        #                          signed=False)
+        
+        # if cur_pos != z_command:
+        #     self.logger.log_error("Z轴电机位置写入失败")
+        #     return -1
+        # else:
+        #     print("写入成功")
 
 
         
@@ -741,7 +705,7 @@ class Huilin():
 
 if __name__ == "__main__":
     Huiling = Huilin()
-    Huiling.arms_home()
+    # Huiling.arms_home()
     # Huiling._move_z_axis(100)
     # Huiling.arms_home()
     # Huiling.Z_motor.sdo_write(0x2600,0x00,int(1000).to_bytes(4, 'little', signed=True))
@@ -756,9 +720,9 @@ if __name__ == "__main__":
     # print("--------------")
     # Huiling.move_joint(desire_joint,0,15)
     # time.sleep(0.02)
-    # cur_angle,cur_pos = Huiling.get_scara()
-    # print("cur_angle",cur_angle)
-    # print("cur_pos",cur_pos)
+    cur_angle,cur_pos = Huiling.get_scara()
+    print("cur_angle",cur_angle)
+    print("cur_pos",cur_pos)
     # print("--------------")
     # Huiling.robot.xyz_move(1,10,10)
     # Huiling.robot.wait_stop()

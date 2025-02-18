@@ -65,14 +65,14 @@ class AdmittanceController(BaseController):
         # 欧拉积分(原始采用的办法)(一阶近似)对应dt = 0.01影响较小，但dt = 0.1以上就影响较大
         # self.clip_command(self.state.arm_desired_acc,"acc")
         self.state.arm_desired_twist += self.state.arm_desired_acc * dt
-        self.clip_command(self.state.arm_desired_twist,"vel",is_print=True)
+        # self.clip_command(self.state.arm_desired_twist,"vel",is_print=True)
         delta_pose = self.state.arm_desired_twist * dt
 
-        delta_pose[2] = self.pos_scale_factor_z * delta_pose[2]
         delta_pose[:2] = self.pos_scale_factor_xy * delta_pose[:2]
-
+        delta_pose[2] = self.pos_scale_factor_z * delta_pose[2]
+        
         delta_pose[3:] = self.rot_scale_factor * delta_pose[3:]
-        # delta_pose[:3] = R.from_quat(self.state.arm_orientation).as_matrix() @ delta_pose[:3]
+        delta_pose[:3] = R.from_quat(self.state.arm_orientation).as_matrix() @ delta_pose[:3]
 
         # delta_ori_mat = R.from_rotvec(delta_pose[3:]).as_matrix()
 
@@ -117,6 +117,7 @@ class AdmittanceController(BaseController):
             print("arm_position_command",self.state.arm_position_command)
             print("arm_orientation_command",R.from_quat(self.state.arm_orientation_command).as_euler('xyz',degrees=True))
             print("delta_pose:",delta_pose)
+            print("-------------admittance_1-------------------------------")
             self.laset_print_time = time.time()
 
 
