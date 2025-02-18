@@ -66,31 +66,48 @@ def q4_2_Q4(params):
     Q4 = q2+q3+q4+108
     return Q4
 
-def capture_and_save(cam):
-    # 加载ArUco字典和检测参数
-    aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_6X6_250)
-    parameters = cv2.aruco.DetectorParameters()
-    # 获取图像,相机内参矩阵
+
+# 创建 ArUco 网格码板的函数
+
+def create_grid_board(markers_x, markers_y, marker_length, marker_separation, dictionary, first_marker_id):
+    # 生成每个标记的 ID，从 first_marker_id 开始
+    ids = np.array([[i] for i in range(first_marker_id, first_marker_id + markers_x * markers_y)])
+
+    # 创建网格码板并设置标记的 ID
+    gridboard = cv2.aruco.GridBoard([markers_x, markers_y], marker_length, marker_separation, dictionary)
+    
+    # 设置网格码板的标记 ID
+    # gridboard.ids = ids
+    
+    return gridboard
+
+def capture_and_save(cam,gridboard):
+    # 获取最新的RGB和深度图像
     rgb_image, depth_image, camera_intrinsics = cam.get_latest_frame()
     
-    # print(camera_intrinsics)
+    print(camera_intrinsics)
 
     camera_matrix = np.array([
     [camera_intrinsics['fx'], 0, camera_intrinsics['cx']],
     [0, camera_intrinsics['fy'], camera_intrinsics['cy']],
     [0, 0, 1]
     ])
-
+    
+    # [fx, 0, cx],
+    # [0, fy, cy],
+    # [0, 0, 1]
+    
+    # 提取畸变系数字典
     distortion_coeffs_dict = camera_intrinsics['distortion_coeffs']
 
+    # 将畸变系数转化为 numpy 数组
     dist_coeffs = np.array([distortion_coeffs_dict['k1'], 
                         distortion_coeffs_dict['k2'], 
                         distortion_coeffs_dict['p1'], 
                         distortion_coeffs_dict['p2'], 
-                        distortion_coeffs_dict['k3']],
-                        dtype=float)
+                        distortion_coeffs_dict['k3']])
+    # dist_coeffs = np.array([k1, k2, p1, p2, k3])
 
-    # 深度图
     max_depth = np.max(depth_image)
     depth_image = (depth_image / max_depth * 65535).astype(np.uint16)
 
@@ -101,35 +118,91 @@ def capture_and_save(cam):
     # depth_image = cv2.flip(depth_image, 0)
 
     # 将RGB图像转为灰度图像
-    gray = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2GRAY)
+    gray_rgb_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2GRAY)
 
     parameters = cv2.aruco.DetectorParameters()
     parameters.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_SUBPIX  # 角点精细化
 
-    corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
+    aruco_dict = cv2.aruco.Dictionary(cv2.aruco.DICT_APRILTAG_36H11,3)
 
-    if ids is not None:
+    # 检测ArUco标记
+    corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(rgb_image, aruco_dict, parameters=parameters)
+    print("Detected corners:", len(corners))
+
+    # 用于存储有效的标记
+    valid_corners = []
+    valid_ids = []
+    valid_3d_points = []  # 存储三维坐标
+
+    for i, corner in enumerate(corners):
+        # 计算标记的中心位置
+        center = np.mean(corner[0], axis=0)
+        x, y = int(center[0]), int(center[1])
+
+        # 获取该位置的深度值
+        depth_value = depth_image[y, x]  # 深度图像是行列格式
+
+        # 过滤深度大于35000和深度小于10的点
+        if depth_value > 10 and depth_value < 35000:
+            valid_corners.append(corner)  # 保留有效的角点
+            valid_ids.append(ids[i])      # 保留有效的标记ID
+            # 计算在相机坐标系中的三维坐标
+            depth_value /= 100 # convert to millimetre
+            X = (x - camera_matrix[0, 2]) * depth_value / camera_matrix[0, 0]
+            Y = (y - camera_matrix[1, 2]) * depth_value / camera_matrix[1, 1]
+            Z = float(depth_value)
+            valid_3d_points.append([X, Y, Z])  # 存储三维坐标
+
+    print("valid corners:", len(valid_corners))
+    
+    # 将 valid_corners 转换为 numpy 数组, 并确保数据类型为 float32
+    valid_corners = np.array(valid_corners, dtype=np.float32)
+    print(valid_corners)
+    print(type(valid_corners))
+    # 将 valid_ids 转换为 numpy 数组, 并确保数据类型为 int32
+    valid_ids = np.array(valid_ids, dtype=np.int32)
+
+    # 将 valid_3d_points 转换为 numpy 数组, 并确保数据类型为 float32
+    valid_3d_points = np.array(valid_3d_points, dtype=np.float32)
+    print(valid_3d_points)
+
+    if len(valid_corners) > 0:
         # 绘制检测到的标记
-        rgb_image = cv2.aruco.drawDetectedMarkers(rgb_image, corners, ids)
-        
-        # 估计每个标记的位姿
-        for i in range(len(ids)):
-            rvec, tvec, _ = cv2.aruco.estimatePoseSingleMarkers(corners[i], 0.1, camera_matrix, dist_coeffs)  # marker尺寸 0.1m
-            
-            # 绘制坐标轴
-            cv2.drawFrameAxes(rgb_image, camera_matrix, dist_coeffs, rvec, tvec, 0.1)  # 绘制坐标轴
-            
-            # 输出标记的位姿
-            print(f"Marker ID: {ids[i]}")
-            print(f"Rotation Vector: {rvec}")
-            print(f"Translation Vector: {tvec}")
+        rgb_image = cv2.aruco.drawDetectedMarkers(rgb_image, valid_corners, valid_ids)
 
-    # # 显示图像
-    # cam.display_images(rgb_image, depth_image)
-    cv2.imshow('out',rgb_image)
-    cv2.waitKey()
-    filename = "ArUco_6x6_" + str(id) + ".png"
-    cv2.imwrite(filename,rgb_image)
+        # 计算 ArUco 标定板相对于相机的位姿
+        # 使用cv2.aruco.estimatePoseBoard来估算标定板的位姿
+        rvec = None
+        tvec = None
+
+        num, rvec, tvec= cv2.aruco.estimatePoseBoard(valid_corners, valid_ids, gridboard, camera_matrix, dist_coeffs, rvec, tvec)
+        print(num)
+        if num:
+            # 绘制标定板的位置和方向
+            cv2.drawFrameAxes(rgb_image, camera_matrix, dist_coeffs, rvec, tvec, 40)  # 100 是绘制坐标轴的长度
+
+            # 输出位姿信息
+            print("Rotation Vector:\n", rvec)
+            print("Translation Vector:\n", tvec)
+
+            # 获取标定板的中心点并结合深度信息
+            for i, corner in enumerate(valid_corners):
+                # 计算标记的中心位置
+                center = np.mean(corner[0], axis=0)
+                x, y = int(center[0]), int(center[1])
+
+                # 获取该位置的深度值
+                depth_value = depth_image[y, x]/100  # 深度图像是行列格式
+                
+                # 显示深度信息
+                print(f"Marker ID: {ids[i]} at ({x}, {y}) has depth value: {depth_value}")
+
+                # 可以在图像上标记深度信息
+                cv2.putText(rgb_image, f"Depth: {depth_value}", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+
+    # 显示图像
+    cam.display_images(rgb_image, depth_image)
+
     # 使用cv2.Rodrigues()将旋转向量rvec转换为旋转矩阵
     R, _ = cv2.Rodrigues(rvec)
 
@@ -175,6 +248,35 @@ def rotate_motor():
     odrv0.axis0.controller.input_pos = 0.5  # -4.4 为朝正下方
     return 
 
+def tsai_lenz(A_list, B_list):
+    """
+    Tsai-Lenz hand-eye calibration method to solve AX = XB.
+    
+    A_list: list of A_i (robot transformation matrices)
+    B_list: list of B_i (camera transformation matrices)
+    """
+    assert len(A_list) == len(B_list), "A and B lists must have the same length."
+    
+    # Initialize matrices
+    n = len(A_list)
+    A_stack = np.zeros((n * 3, 3))
+    B_stack = np.zeros((n * 3, 3))
+    b_stack = np.zeros((n * 3, 1))
+    
+    for i in range(n):
+        A = A_list[i][:3, :3]  # Rotation part of A_i
+        B = B_list[i][:3, :3]  # Rotation part of B_i
+        t = A_list[i][:3, 3]   # Translation part of A_i
+        
+        # Stack the equations
+        A_stack[i * 3: (i + 1) * 3, :] = A - B
+        b_stack[i * 3: (i + 1) * 3, :] = t
+        
+    # Use least squares to solve the linear system
+    X = np.linalg.lstsq(A_stack, b_stack, rcond=None)[0]
+    
+    return X
+
 def save_T_robot_to_file(T, filename):
     """
     将4x4齐次变换矩阵 T 保存到 txt 文件，并支持追加写入。
@@ -198,6 +300,27 @@ def save_T_robot_to_file(T, filename):
             np.savetxt(f, [T_flat], delimiter=",", fmt="%.6f")
 
     print(f"变换矩阵 T 已成功追加保存至 {absolute_filename}")
+
+def load_T_robot_from_file(filename="T_E2B_data.txt"):
+    """
+    从 txt 文件读取所有保存的 4x4 变换矩阵
+    :param filename: 存储的文件名，默认为 "T_E2B_data.txt"
+    :return: 读取的所有 4x4 变换矩阵列表
+    """
+    if not os.path.exists(filename):
+        print("文件不存在，无法读取。")
+        return []
+
+    # 读取数据
+    data = np.loadtxt(filename, delimiter=",")
+    
+    # 处理数据维度
+    if data.ndim == 1:
+        # 只有一行数据时，reshape 成 4x4
+        return [data.reshape(4, 4)]
+    else:
+        # 多行数据，每 16 个值构成一个 4x4 矩阵
+        return [row.reshape(4, 4) for row in data]
 
 if __name__ == '__main__':
     # robot
@@ -229,14 +352,14 @@ if __name__ == '__main__':
     first_marker_id = 0
 
     # 创建网格码板
-    aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_APRILTAG_36h11)
-    grid_board = cv2.aruco.CharucoBoard([markers_x, markers_y], marker_length, marker_separation, aruco_dict)
-    
+    aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_APRILTAG_36H11)
+    grid_board = create_grid_board(markers_x, markers_y, marker_length, marker_separation, aruco_dict, first_marker_id)
+
     # 显示网格码板图像（可选）
     img_grid_board = grid_board.generateImage(outSize=[800,600])
-    cv2.imshow('GridBoard', img_grid_board)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    # cv2.imshow('GridBoard', img_grid_board)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
     ###################################
     # 移动
     my_Huilin.robot.xyz_move(1,90,10)
