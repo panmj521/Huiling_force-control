@@ -557,8 +557,6 @@ class Huilin():
         #电机使能1开启0关闭
         # self.Z_motor.sdo_write(0x2100, 0x00, (0x01).to_bytes(2, 'little'))
         # target_position = abs(target_position)
-        if target_position < 0:
-            target_position = 0
         target_position = target_position * 12789.4736842
         self.Z_motor.sdo_write(0x2400, 0x00, int(target_position).to_bytes(4, 'little'))
         # time.sleep(0.01)
@@ -673,9 +671,7 @@ class Huilin():
 
     def send_command(self, arm_position_command, arm_orientation_command):
         pose_command = arm_position_command[:2]
-        z_command = arm_position_command[2]
-        
-        
+        # z_command = arm_position_command[2]
         # self.robot.get_scara_param()
         cur = self.cur_angle.copy()
 
@@ -684,17 +680,31 @@ class Huilin():
        
         if code == 0:
             # if np.max(joint_diff) > 0.01:
-            self._move_z_axis_p(z_command)
+            # self._move_z_axis_p(z_command)
             self.move_joint(desire_joint)
             # # 考虑可以采取new_movej_angle(没有试过效果),让速度很小
             # self.move_joint(desire_joint,0,0.1)
-
-
         else:
             self.logger.log_error("Inverse kinematics failed, shutting down")
             self.robot.emergency_stop()
             self.power_off()
             return -1
+        
+    def send_command_z(self, arm_position_command):
+        z_command = arm_position_command[2]
+        if z_command < 0:
+            z_command = 0
+        self._move_z_axis_p(z_command)
+        #读取当前位置是否写入
+        cur_pos = int.from_bytes(self.Z_motor.sdo_read(0x2400, 0x00),
+                                 byteorder='little',
+                                 signed=False)
+        if cur_pos != z_command:
+            self.logger.log_error("Z轴电机位置写入失败")
+            return -1
+
+
+
 
         
     def get_movej_error_message(self,code):
