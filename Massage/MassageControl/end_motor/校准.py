@@ -24,7 +24,7 @@ while odrv0.axis0.current_state != 1:
 # 6. 校准完成后再次查看是否存在错误
 odrive.utils.dump_errors(odrv0)
 
-# 7. 让电机执行 “编码器偏移校准(Encoder Offset Calibration)”
+# 7. 让电机执行 “编码器偏移校ncoder Of准(Efset Calibration)”
 odrv0.axis0.requested_state = odrive.utils.AxisState.ENCODER_OFFSET_CALIBRATION
 time.sleep(6)  # 给编码器校准预留时间，一般需要几秒到十几秒不等
 

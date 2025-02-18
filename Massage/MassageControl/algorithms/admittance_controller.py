@@ -62,7 +62,7 @@ class AdmittanceController(BaseController):
             print(f'wrench_err: {wrench_err} ||| external_wrench_tcp: {self.state.external_wrench_tcp} ||| desired_wrench: {self.state.desired_wrench}')
         
         self.state.arm_desired_acc = np.linalg.inv(self.M) @ (wrench_err - self.D @ (self.state.arm_desired_twist -self.state.desired_twist) - self.K @ self.state.pose_error)
-        # 欧拉积分(原始采用的办法)(一阶近似)对应dt = 0.01影响较小，但dt = 0.05影响较大
+        # 欧拉积分(原始采用的办法)(一阶近似)对应dt = 0.01影响较小，但dt = 0.1以上就影响较大
         # self.clip_command(self.state.arm_desired_acc,"acc")
         self.state.arm_desired_twist += self.state.arm_desired_acc * dt
         self.clip_command(self.state.arm_desired_twist,"vel",is_print=True)

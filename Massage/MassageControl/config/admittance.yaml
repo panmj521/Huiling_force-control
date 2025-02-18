@@ -51,16 +51,16 @@ damp_rot: [0.6, 0.6, 0.6]
 # damp_tran: [40, 40, 40]
 # damp_rot: [3, 3, 3]
 
-#dt = 0.05 dt增大考虑降低质量、刚度和缩放因子，阻尼自适应
-desired_xi: 1
-pos_scale_factor_z: 140  #700/5
-pos_scale_factor_xy: 80  #400/5
-rot_scale_factor: 1 
+# #dt = 0.05 dt增大考虑降低质量、刚度和缩放因子，阻尼自适应
+# desired_xi: 1
+# pos_scale_factor_z: 140  #700/5
+# pos_scale_factor_xy: 80  #400/5
+# rot_scale_factor: 1 
 
-mass_tran: [0.5,0.5, 0.5]
-stiff_tran: [0.2, 0.2, 0.2]
-damp_tran: [10, 10, 10]
+# mass_tran: [0.5,0.5, 0.5]
+# stiff_tran: [0.2, 0.2, 0.2]
+# damp_tran: [10, 10, 10]
 
-damp_rot: [0.3, 0.3, 0.3]
-stiff_rot: [1, 1, 1]
-mass_rot: [0.1, 0.1, 0.1]
+# damp_rot: [0.3, 0.3, 0.3]
+# stiff_rot: [1, 1, 1]
+# mass_rot: [0.1, 0.1, 0.1]

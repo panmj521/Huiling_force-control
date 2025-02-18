@@ -200,7 +200,8 @@ class MassageRobot:
 
 
         # 频率
-        self.control_rate = Rate(arm_config['control_rate'])
+        self.xy_control_rate = Rate(arm_config['control_rate'])
+        self.z_control_rate = Rate(arm_config['z_control_rate'])
         self.sensor_rate = Rate(arm_config['sensor_rate'])
         self.arm_rate = Rate(arm_config['arm_rate'])
         self.command_rate = Rate(arm_config['command_rate'])
@@ -539,8 +540,7 @@ class MassageRobot:
     #####################################################################################################
     def step(self,dt):
         self.controller_manager.step(dt)
-
-        
+               
     def sensor_measure_loop(self):
         self.logger.log_info("力传感器测量线程启动")
         while (not self.arm.is_exit) and (not self.exit_event.is_set()):
@@ -565,15 +565,38 @@ class MassageRobot:
                 self.exit_event.set()
             self.arm_rate.sleep()
 
+    # def arm_command_loop(self):
+    #     self.logger.log_info("机械臂控制线程启动")
+    #     while (not self.arm.is_exit) and (not self.exit_event.is_set()):
+    #         try:
+    #             if not self.is_waitting:
+    #                 self.step(self.control_rate.to_sec())
+    #                 # print(self.arm_state.arm_position_command)
+    #                 self.last_command_time += 1
+    #                 print("self.arm_state.arm_position_command[:2]:",self.arm_state.arm_position_command[:2])
+    #                 code = self.arm.send_command(self.arm_state.arm_position_command,self.arm_state.arm_orientation_command)
+    #                 # if self.last_command_time > 10:
+    #                 #     print("commandTime:",(time.time()-self.last_record_time)/self.last_command_time)
+    #                 #     self.last_record_time = time.time()
+    #                 #     self.last_command_time = 0
+    #                 if code == -1:
+    #                     self.logger.log_error("机械臂急停")
+    #                     self.stop()
+    #                     break
+    #         except Exception as e:
+    #             self.logger.log_error(f"机械臂控制失败:{e}")
+    #             self.exit_event.set()
+    #         self.xy_control_rate.sleep()
+
     def arm_command_loop(self):
         self.logger.log_info("机械臂控制线程启动")
         while (not self.arm.is_exit) and (not self.exit_event.is_set()):
             try:
                 if not self.is_waitting:
-                    self.step(self.control_rate.to_sec())
+                    # self.step(self.control_rate.to_sec())
                     # print(self.arm_state.arm_position_command)
                     self.last_command_time += 1
-                    print("self.arm_state.arm_position_command:",self.arm_state.arm_position_command)
+                    print("self.arm_state.arm_position_command[:2]:",self.arm_state.arm_position_command[:2])
                     code = self.arm.send_command(self.arm_state.arm_position_command,self.arm_state.arm_orientation_command)
                     # if self.last_command_time > 10:
                     #     print("commandTime:",(time.time()-self.last_record_time)/self.last_command_time)
@@ -586,14 +609,14 @@ class MassageRobot:
             except Exception as e:
                 self.logger.log_error(f"机械臂控制失败:{e}")
                 self.exit_event.set()
-            self.control_rate.sleep()
+            self.xy_control_rate.sleep()
 
     def arm_command_loop_z(self):
         self.logger.log_info("机械臂z轴升降控制线程启动")
         while (not self.arm.is_exit) and (not self.exit_event.is_set()):
             try:
                 if not self.is_waitting:
-                    self.step(self.control_rate.to_sec())
+                    self.step(self.z_control_rate.to_sec())
                     # print(self.arm_state.arm_position_command)
                     self.last_command_time_z += 1
                     print("self.arm_state.arm_position_command[2]:",self.arm_state.arm_position_command[2])
@@ -609,7 +632,7 @@ class MassageRobot:
             except Exception as e:
                 self.logger.log_error(f"机械臂z轴控制失败:{e}")
                 self.exit_event.set()
-            self.control_rate.sleep()
+            self.z_control_rate.sleep()
 
     def start(self):
         if self.exit_event.is_set():
@@ -642,8 +665,8 @@ class MassageRobot:
             self.arm_state.arm_position_command = poistion
             self.arm_state.desired_orientation = quat_rot
             self.arm_state.arm_orientation_command = quat_rot
-            self.arm_control_thread.start()
             self.arm_control_thread_z.start()
+            self.arm_control_thread.start()
 
             self.logger.log_info("MassageRobot启动")
             time.sleep(1)

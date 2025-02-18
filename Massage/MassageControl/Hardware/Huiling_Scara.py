@@ -488,7 +488,6 @@ class Huilin():
                 theta[1] = np.clip(theta[1], 30 * np.pi / 180, 330 * np.pi / 180)
                 theta[2] = np.clip(theta[2], 0* np.pi / 180, 180 * np.pi / 180)
             else:
-                self.logger.log_warning("最大迭代次数已超过，未能收敛到解")
                 return None, 1
             min_solution = theta * 180 / np.pi
             desire_joint = np.array([
