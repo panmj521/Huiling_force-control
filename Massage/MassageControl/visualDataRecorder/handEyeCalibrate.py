@@ -14,62 +14,30 @@ def load_matrix(fileName):
 def tsai(E2B, O2C):
     n = E2B.shape[0]
     
-    # 初始化旋转矩阵和位移向量
-    RA = np.zeros((3, 3, n))
-    RB = np.zeros((3, 3, n))
-    tA = np.zeros((3, n))
-    tB = np.zeros((3, n))
+    # 将旋转矩阵和位移向量转换为列表形式
+    RA = [E2B[i, :3, :3] for i in range(n)]
+    tA = [E2B[i, :3, 3] for i in range(n)]
+    RB = [O2C[i, :3, :3] for i in range(n)]
+    tB = [O2C[i, :3, 3] for i in range(n)]
     
-    for i in range(n):
-        A_mat = E2B[i, :, :].reshape(4, 4)
-        B_mat = O2C[i, :, :].reshape(4, 4)
-        
-        RA[:, :, i] = A_mat[:3, :3]
-        tA[:, i] = A_mat[:3, 3]
-        RB[:, :, i] = B_mat[:3, :3]
-        tB[:, i] = B_mat[:3, 3]
-    print("tB",tB)
-    print("A_mat",A_mat)
-    # 计算旋转矩阵 RX
-    M = np.zeros((3, 3))
-    for i in range(n):
-        M += RB[:, :, i] @ RA[:, :, i].T
-    U, _, Vt = np.linalg.svd(M)
-    RX = U @ Vt
+    # 检查转换后的形状
+    assert all(r.shape == (3,3) for r in RA), "RA 的每个元素应为 3x3"
+    assert all(r.shape == (3,) for r in tA), "tA 的每个元素应为 3 元素向量"
+    assert all(r.shape == (3,3) for r in RB), "RB 的每个元素应为 3x3"
+    assert all(r.shape == (3,) for r in tB), "tB 的每个元素应为 3 元素向量"
     
-    # 计算平移向量 tX
-    A = np.zeros((3 * n, 3))
-    b = np.zeros((3 * n, 1))
-    
-    for i in range(n):
-        A[3 * i:3 * i + 3, :] = np.eye(3) - RA[:, :, i]
-        b[3 * i:3 * i + 3, :] = tA[:, i].reshape(-1, 1) - RX @ tB[:, i].reshape(-1, 1)
-    tX = np.linalg.pinv(A) @ b
-    print("tX",tX)
+    # 调用手眼标定函数
+    R_cam2gripper, t_cam2gripper = cv2.calibrateHandEye(
+        RA, tA,
+        RB, tB
+    )
 
-    # 输出结果 X
-    X = np.eye(4)
-    X[:3, :3] = RX
-    X[:3, 3] = tX.flatten()
-
-    return X
+    return R_cam2gripper, t_cam2gripper
 
 if __name__ == '__main__':
-
     T_E2B = load_matrix("T_E2B_data.txt")
     T_O2C = load_matrix("T_O2C_data.txt")
-
-    sol = tsai(T_E2B,T_O2C)
-    print("X=",sol)
-
-    vali_1 = T_E2B[0] @ sol @ T_O2C[0]
-    print("Validation 1:", vali_1)
-    vali_2 = T_E2B[1] @ sol @ T_O2C[1]
-    print("Validation 2:", vali_2)
-
-    error = vali_2 - vali_1
-    print("Error:", error)
-
-    # 将结果保存到文件
-    # np.savetxt("/home/jsfb/jsfb_ws/MassageRobot_huiling/Massage/MassageControl/visualDataRecorder/handeye_R.txt", cali_R, delimiter=",")
-    # np.savetxt("/home/jsfb/jsfb_ws/MassageRobot_huiling/Massage/MassageControl/visualDataRecorder/handeye_t.txt", cali_t, delimiter=",")
+    
+    R_cam2gripper, t_cam2gripper = tsai(T_E2B, T_O2C)
+    print("相机与机械臂末端的旋转矩阵：\n", R_cam2gripper)
+    print("相机与机械臂末端的平移向量：\n", t_cam2gripper)

@@ -137,7 +137,6 @@ class Huilin():
         self.theta2_range=(9.18, 351.57)
         self.is_exit = False
         self.move_joint(self.init_pos,0)
-        self.wait_stop()
         self._move_z_axis_p(0)
         self.logger.log_info("已到达机械臂运动起始位置")     
 
@@ -280,7 +279,10 @@ class Huilin():
     #机械臂全部回正
     def arms_home(self):
         #回正操作可能会导致连杆四碰撞，可先让它升到一个安全让连杆四回位的位置再回正
+        self.move_joint([30,225,138],0)
+        self.move_joint([30,225,108],0)
         self.move_joint([0,180,108],0)
+
         self._move_z_axis_p(0)
         # self.move_joint([30,240,198],0)
         # state1 = self.robot.joint_home(4)
@@ -580,7 +582,7 @@ class Huilin():
     #         # self.robot.wait_stop()
     #         return 0
     
-    def move_joint(self, joint, mode = 1, speed = 15):
+    def move_joint(self, joint, mode = 1, speed = 20):
         #模式1为小角度输入，适用于一段段的发送位置差距较小的移动
         if mode == 1:
             cur_angle = self.cur_angle.copy()
@@ -608,7 +610,7 @@ class Huilin():
             code = self.robot.new_movej_angle(joint[0],joint[1],0,joint[2],speed,1)
             #待优化
             self.get_movej_error_message(code)
-            # self.robot.wait_stop()
+            self.robot.wait_stop()
             return 0
 
 
@@ -739,24 +741,25 @@ class Huilin():
 
 if __name__ == "__main__":
     Huiling = Huilin()
+    Huiling.arms_home()
     # Huiling._move_z_axis(100)
     # Huiling.arms_home()
     # Huiling.Z_motor.sdo_write(0x2600,0x00,int(1000).to_bytes(4, 'little', signed=True))
     # time.sleep(8)
-    time.sleep(0.02)
-    cur_angle,cur_pos = Huiling.get_scara()
-    print("cur_angle",cur_angle)
-    print("cur_pos",cur_pos)
-    print("--------------")
-    desire_joint,test = Huiling.inverse_kinematic(cur_angle,[cur_pos[0]+10,cur_pos[1]+10])
-    print(desire_joint)
-    print("--------------")
-    Huiling.move_joint(desire_joint,0,15)
-    time.sleep(0.02)
-    cur_angle,cur_pos = Huiling.get_scara()
-    print("cur_angle",cur_angle)
-    print("cur_pos",cur_pos)
-    print("--------------")
+    # time.sleep(0.02)
+    # cur_angle,cur_pos = Huiling.get_scara()
+    # print("cur_angle",cur_angle)
+    # print("cur_pos",cur_pos)
+    # print("--------------")
+    # desire_joint,test = Huiling.inverse_kinematic(cur_angle,[cur_pos[0]+10,cur_pos[1]+10])
+    # print(desire_joint)
+    # print("--------------")
+    # Huiling.move_joint(desire_joint,0,15)
+    # time.sleep(0.02)
+    # cur_angle,cur_pos = Huiling.get_scara()
+    # print("cur_angle",cur_angle)
+    # print("cur_pos",cur_pos)
+    # print("--------------")
     # Huiling.robot.xyz_move(1,10,10)
     # Huiling.robot.wait_stop()
     # time.sleep(0.02)
