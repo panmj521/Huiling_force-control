@@ -141,6 +141,11 @@ class Huilin():
         self.logger.log_info("已到达机械臂运动起始位置")
         time.sleep(5)     
 
+        #关节角度连续错误控制值
+        self.last_valid_joint = None  # 存储上一次有效的关节角度
+        self.consecutive_errors = 0   # 记录连续错误次数
+        self.max_consecutive_errors = 10  # 最大允许连续错误次数
+
 
     def monitor_arm_status(self):
         """启动状态监控线程"""
@@ -502,8 +507,27 @@ class Huilin():
             joint_diff = desire_joint - cur_angle
             print("joint_diff",joint_diff)
             if np.any(np.abs(joint_diff) >= joint_diff_thresholds):
+                self.consecutive_errors += 1
+                if self.last_valid_joint is not None:
+                    if self.consecutive_errors < self.max_consecutive_errors:
+                        #再获取一次关节角度
+                        time.sleep(0.02)
+                        self.robot.get_scara_param()
+                        cur_angle = np.array([self.robot.angle1,self.robot.angle2,self.robot.r])
+                        joint_diff = self.last_valid_joint - cur_angle
+                        if np.any(np.abs(joint_diff) < joint_diff_thresholds):
+                            self.logger.log_warning(f"检测到大角度偏差，使用上一次有效解。连续错误次数: {self.consecutive_errors}")
+                            return self.last_valid_joint, 0
+                        else:
+                            self.logger.log_error(f"连续错误次数过多 ({self.consecutive_errors})，返回错误状态")
+                            return desire_joint, 2
+                    else:
+                        # 连续错误过多，返回错误状态
+                        self.logger.log_error(f"连续错误次数过多 ({self.consecutive_errors})，返回错误状态")
+                        return desire_joint, 2
                 return desire_joint, 2
             else:
+                self.last_valid_joint = desire_joint.copy()
                 return desire_joint, 0
         else:
             # 非数值方法的实现（如果有的话再补充）
