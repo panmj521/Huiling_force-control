@@ -89,9 +89,9 @@ class Huilin():
                     #电机正反转0正转1反转
                     self.Z_motor.sdo_write(0x2607, 0x00, (0x00).to_bytes(2, 'little'))
                     #初始速度为0
-                    self.Z_motor.sdo_write(0x2600, 0x00, int(500).to_bytes(4, 'little', signed=True))
+                    self.Z_motor.sdo_write(0x2600, 0x00, int(700).to_bytes(4, 'little', signed=True))
                     #位置指令均值滤波时间 
-                    self.Z_motor.sdo_write(0x2403,0x00, int(20000).to_bytes(4,'little'))                    
+                    self.Z_motor.sdo_write(0x2403,0x00, int(15000).to_bytes(4,'little'))                    
                     # [0]位置模式 [1]速度模式 [2]力矩模式 [3]电压模式 [4]电流模式
                     self.Z_motor.sdo_write(0x2101, 0x00, (0x00).to_bytes(2, 'little'))
                     #[0]增量模式 [1]绝对值模式 用于区分PP模式下位置指令是增量值还是绝对值
@@ -123,7 +123,7 @@ class Huilin():
         #退出任务,程序正常结束执行清理任务
         #atexit.register(self.exit_task)
         #初始化以及关机位置，待更改
-        self.init_pos = [20,225,108]
+        self.init_pos = [20,235,108]
         #Rot_angle
         self.init_pos_Rotagl = [30,60,30]
         # self.off_pos = [0,180,108]
@@ -137,8 +137,9 @@ class Huilin():
         self.theta2_range=(9.18, 351.57)
         self.is_exit = False
         self.move_joint(self.init_pos,0)
-        self._move_z_axis_p(0)
-        self.logger.log_info("已到达机械臂运动起始位置")     
+        self._move_z_axis_p(500)
+        self.logger.log_info("已到达机械臂运动起始位置")
+        time.sleep(5)     
 
 
     def monitor_arm_status(self):
@@ -346,7 +347,8 @@ class Huilin():
         cur_angle = [self.robot.angle1,self.robot.angle2,self.robot.r]
         end_x = self.robot.x + self.L3 * np.cos((self.robot.r-108)*np.pi/180)
         end_y = self.robot.y + self.L3 * np.sin((self.robot.r-108)*np.pi/180)
-        cur_pos = [end_x,end_y]
+        z = self.arm_z
+        cur_pos = [end_x,end_y,z]
         return cur_angle, cur_pos
 
             
@@ -562,7 +564,6 @@ class Huilin():
         target_position = target_position * 12789.4736842
         self.Z_motor.sdo_write(0x2400, 0x00, int(target_position).to_bytes(4, 'little'))
         # time.sleep(0.01)
-        return 0
 
 
     # #末端电机5
@@ -657,6 +658,8 @@ class Huilin():
         if z_command < 0:
             z_command = 0
         self._move_z_axis_p(z_command)
+
+        return 0
         # #读取当前位置是否写入
         # cur_pos = int.from_bytes(self.Z_motor.sdo_read(0x2400, 0x00),
         #                          byteorder='little',
@@ -720,8 +723,7 @@ if __name__ == "__main__":
     # print("--------------")
     # Huiling.move_joint(desire_joint,0,15)
     # time.sleep(0.02)
-    cur_angle,cur_pos = Huiling.get_scara()
-    print("cur_angle",cur_angle)
+    cur_pos,cur_angle = Huiling.get_arm_position()
     print("cur_pos",cur_pos)
     # print("--------------")
     # Huiling.robot.xyz_move(1,10,10)

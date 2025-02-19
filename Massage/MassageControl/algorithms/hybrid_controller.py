@@ -99,7 +99,18 @@ class HybridController(BaseController):
         self.e_t2 = self.e_t1
         self.e_t1 = self.e_t
         self.e_t = force_err
-        self.force_control_value += self.Kp_force * (self.e_t - self.e_t1) + self.Ki_force * self.e_t + self.Kd_force * (self.e_t - 2 * self.e_t1 + self.e_t2)
+        # self.force_control_value += self.Kp_force * (self.e_t - self.e_t1) + self.Ki_force * self.e_t  + self.Kd_force * (self.e_t - 2 * self.e_t1 + self.e_t2) 
+        self.force_control_value += self.Kp_force * (self.e_t - self.e_t1) + self.Ki_force * self.e_t * dt + self.Kd_force * (self.e_t - 2 * self.e_t1 + self.e_t2) /dt
+        # MAX_INTEGRAL = 5.0
+        # self.force_control_value = np.clip(
+        #     self.force_control_value, 
+        #     -MAX_INTEGRAL, 
+        #     MAX_INTEGRAL
+        # )
+
+        if abs(self.e_t) < 0.3:  # 误差小于0.3N时
+            self.force_control_value *= 0.7  # 衰减积分积累
+            
         self.state.arm_desired_acc[2] = (1.0 / self.force_mass) * (self.force_control_value - self.force_damp * self.state.arm_desired_twist[2])
 
         self.pose_integral_error +=  self.state.pose_error * dt
@@ -127,13 +138,14 @@ class HybridController(BaseController):
 
         if time.time() - self.laset_print_time > 0.1:
             print("-----------------hybrid1-------------------------------")
-            print("arm_position:",self.state.arm_position)
-            print("desired_position:",self.state.desired_position)
-            # print("arm_orientation",R.from_quat(self.state.arm_orientation).as_euler('xyz',degrees=True))
-            # print("desired_orientation",R.from_quat(self.state.desired_orientation).as_euler('xyz',degrees=True))
-            print("arm_position_command",self.state.arm_position_command)
-            # print("arm_orientation_command",R.from_quat(self.state.arm_orientation_command).as_euler('xyz',degrees=True))
-            print("delta_pose:",delta_pose)
+            print("force_control_value",self.force_control_value)
+            # print("arm_position:",self.state.arm_position)
+            # print("desired_position:",self.state.desired_position)
+            # # print("arm_orientation",R.from_quat(self.state.arm_orientation).as_euler('xyz',degrees=True))
+            # # print("desired_orientation",R.from_quat(self.state.desired_orientation).as_euler('xyz',degrees=True))
+            # print("arm_position_command",self.state.arm_position_command)
+            # # print("arm_orientation_command",R.from_quat(self.state.arm_orientation_command).as_euler('xyz',degrees=True))
+            # print("delta_pose:",delta_pose)
             self.laset_print_time = time.time()
 
 

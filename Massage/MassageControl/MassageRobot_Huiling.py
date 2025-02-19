@@ -596,7 +596,7 @@ class MassageRobot:
                     # self.step(self.z_control_rate.to_sec())
                     # print(self.arm_state.arm_position_command)
                     self.last_command_time += 1
-                    print("self.arm_state.arm_position_command[:2]:",self.arm_state.arm_position_command[:2])
+                    # print("self.arm_state.arm_position_command[:2]:",self.arm_state.arm_position_command[:2])
                     code = self.arm.send_command(self.arm_state.arm_position_command,self.arm_state.arm_orientation_command)
                     # if self.last_command_time > 10:
                     #     print("commandTime:",(time.time()-self.last_record_time)/self.last_command_time)
@@ -619,7 +619,7 @@ class MassageRobot:
                     self.step(self.z_control_rate.to_sec())
                     # print(self.arm_state.arm_position_command)
                     self.last_command_time_z += 1
-                    print("self.arm_state.arm_position_command[2]:",self.arm_state.arm_position_command[2])
+                    # print("self.arm_state.arm_position_command[2]:",self.arm_state.arm_position_command[2])
                     code = self.arm.send_command_z(self.arm_state.arm_position_command)
                     # if self.last_command_time > 10:
                     #     print("commandTime:",(time.time()-self.last_record_time)/self.last_command_time)
@@ -632,7 +632,7 @@ class MassageRobot:
             except Exception as e:
                 self.logger.log_error(f"机械臂z轴控制失败:{e}")
                 self.exit_event.set()
-            self.z_control_rate.sleep()
+            self.z_control_rate.sleep
 
     def start(self):
         if self.exit_event.is_set():
@@ -1607,7 +1607,7 @@ if __name__ == "__main__":
    
     signal.signal(signal.SIGINT, signal_handler)
     
-    robot.init_hardwares([ 437.1799, -138.0781 , 0, np.pi, 0, 0])
+    robot.init_hardwares([ 482.22320556 ,-154.47224015 , 500, np.pi, 0, 0])
     # robot.move_to_points(1.247456,pose=[0.247,0.1043,0.761,0,0,0],is_interrupt=False)
     # traj = robot.traj_generate(1.247456,pose=[0.247,0.1043,0.761,0,0,0],interpolation='linear')
     # print(traj)
@@ -1617,11 +1617,11 @@ if __name__ == "__main__":
     robot.sensor_enable()
     # robot.switch_payload('thermotherapy_head')
     # robot.switch_payload('shockwave_head')
-    robot.switch_payload('none')
+    robot.switch_payload('roller')
     # robot.switch_payload('wash_head')
 
     # robot.controller_manager.switch_controller('admittance')
-    robot.controller_manager.switch_controller('hybrid')
+    robot.controller_manager.switch_controller('admittance')
 
     # robot.arm_state.desired_wrench = np.array([0])
 
