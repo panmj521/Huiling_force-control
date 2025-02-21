@@ -33,6 +33,16 @@ import threading
 import pysoem
 import odrive
 
+"""
+慧灵类初始化，目前初始化了机械臂，Z轴电机，末端电机使用较少，考虑可以直接放在一个函数里去调用即可
+慧灵初始化成功后我会开一个一直运行的线程，用于监控机械臂的状态，如果出现异常则会自动断电
+
+目前查看还发现还有存在一些问题。
+1.慧灵机械臂在读取状态数据更新的时候，偶尔有几次数据出现不准确的情况，也就是关节角读取和上一次差别太大
+    这也导致逆运动学会产生一个和当前角度差别很大的解。
+2.慧灵机械臂的配置文件（so文件）可能有问题，有几个函数每次调用都显示没有并报警，一个是close_server，一个是emergency_stop
+   后续要和慧灵那边对接一下要一份最新能够包含所有功能的配置文件（so文件用于ubuntu，dll文件用于win）
+"""
 class Huilin():
     def __init__(self,arm_ip = 114):
         # 创建日志目录
@@ -224,7 +234,7 @@ class Huilin():
         except Exception as e:
             self.logger.log_error(f"状态检查异常: {e}")
             return False
-        
+    #由于aubo机械臂的massagerobot有init函数，所以我这里必须保证有这个接口
     def init(self):
         pass
 
@@ -255,7 +265,7 @@ class Huilin():
         print(collision_error.get(robot_collision_state, "机械臂碰撞状态未知"))
         return robot_connect_state, robot_collision_state
 
-
+    #机械臂初始化initial
     def start_up(self):
         max_retries = 3
         retry_count = 0
@@ -288,7 +298,7 @@ class Huilin():
         self.move_joint([30,225,138],0)
         self.move_joint([30,225,108],0)
         self.move_joint([0,180,108],0)
-
+        #z轴回零
         self._move_z_axis_p(0)
         # self.move_joint([30,240,198],0)
         # state1 = self.robot.joint_home(4)
@@ -451,7 +461,17 @@ class Huilin():
     #             return desire_joint, 2
     #         # print(desire_joint)
     #         return desire_joint, 0
+    """
+    逆运动学的构造基于数值方法，查找距离当前位置到目标位置最近的一个关节变化，
+    实际上力控每次也是希望能够有小角度的变化，所以我将初始条件去掉了机械初始位置，
+    只考虑从当前机械臂位置到目标位置的变化，这样可以减少计算量，提高速度。
 
+    但是目前依然存在一些问题，比如慧灵机械臂在读取状态数据更新的时候，偶尔有几次数据出现不准确的情况，也就是关节角读取和上一次差别太大
+    这也导致逆运动学会产生一个和当前角度差别很大的解，
+    所以这个时候我会返回上一次的有效解，如果连续错误次数超过10次，我会返回错误状态。(后续如果解决了这个读取不准确的问题，该方法可以去掉)
+    慧灵工程师说是每次读取数据之间最好隔50ms，但是我测试用50ms依然会有问题，还是会出现偶尔读取数据不准确偏差过大的情况。
+
+    """
     def inverse_kinematic(self,cur_angle, position, use_numerical=True, lr=-1):
         if use_numerical:
             max_iter = 500
@@ -506,11 +526,12 @@ class Huilin():
             ])
             joint_diff = desire_joint - cur_angle
             print("joint_diff",joint_diff)
+            #如果角度偏差过大(一般是机械臂读取数据不准确导致的)，考虑返回上一次的有效解作为输出
             if np.any(np.abs(joint_diff) >= joint_diff_thresholds):
                 self.consecutive_errors += 1
                 if self.last_valid_joint is not None:
                     if self.consecutive_errors < self.max_consecutive_errors:
-                        #再获取一次关节角度
+                        #再获取一次关节角度（缓冲20ms），看是否还是偏差过大
                         time.sleep(0.02)
                         self.robot.get_scara_param()
                         cur_angle = np.array([self.robot.angle1,self.robot.angle2,self.robot.r])
@@ -543,7 +564,7 @@ class Huilin():
             self.logger.log_error(f'desire_joint: {desire_joint}')
             self.robot.emergency_stop()
             self.power_off()
-    #Z轴电机速度控制
+    #Z轴电机速度控制，当时一个实习生写的，写的有点问题，使用该控制方式会导致出现阻塞现象，所以我将其注释掉了，采用位置控制，试试下发指令没有延迟
     # def _move_z_axis(self, target_position,target_speed = 1000, error=1):
     #     if target_speed >= 0:
     #         if 0 <= target_position <= 570:
@@ -574,7 +595,7 @@ class Huilin():
     #     else:
     #         self.logger.log_error("速度不能小于0")
     #         return 1
-        
+    
     def _move_z_axis_p(self,target_position,target_speed = None):
         if target_speed:
             self.Z_motor.sdo_write(0x2600, 0x00, target_speed.to_bytes(4, 'little', signed=True))
@@ -610,8 +631,17 @@ class Huilin():
     #         # self.robot.wait_stop()
     #         return 0
     
+    """
+    机械臂控制函数
+    第一种就是小角度输入，适用于一段段的发送位置差距较小的移动
+    这也是力控中使用的模式，每次通过小角度的移动并将其分成多分，按道理来说分的越细，运动越平滑。
+    但是分的越细，时间也会越长，导致机械臂运动速度变慢，响应也就变慢。
+
+    第二种就是直接移动，用于初始工作位置移动到指定的地方获得其他较大角度的一的移动
+    关键是知道了目标位置，所以可以直接发送指令
+    """
     def move_joint(self, joint, mode = 1, speed = 20):
-        #模式1为小角度输入，适用于一段段的发送位置差距较小的移动
+
         if mode == 1:
             cur_angle = self.cur_angle.copy()
             delta_joint = joint - cur_angle
@@ -633,7 +663,6 @@ class Huilin():
                 target_joint = cur_angle + (i + 1) * step_size
                 self.robot.hi_position_send(target_joint[0],target_joint[1],0,target_joint[2])
             return 0
-        #模式0为直接移动，用于初始工作位置移动到指定的地方获得其他较大角度的一的移动
         else:
             code = self.robot.new_movej_angle(joint[0],joint[1],0,joint[2],speed,1)
             #待优化
@@ -642,8 +671,7 @@ class Huilin():
             return 0
 
 
-        
-
+    
     def move_pose(self, pos, deg,speed =50,roughly = 1, lr= 1, wait = False):
         code = self.robot.new_movej_xyz_lr(pos[0], pos[1], pos[2], deg[2], speed, roughly, lr)
         if code == 1:
@@ -655,7 +683,16 @@ class Huilin():
             self.power_off()
             return -1
          
+    """
+    send_command函数是用来发送指令的，在massagerobot中，会根据控制频率来调用该指令
+    之前的send_command函数是把机械臂控制和z轴电机控制放在一起，电机发送没有延迟，但是机械臂控制有延迟
+    所以可能后续如果做单独的z轴力控制，反而会影响整体的控制效果，所以我将z轴电机的send_command函数单独拿出来了。
 
+    步骤：
+    1.获得机械臂运动控制的目标位置
+    2.将目标位置和当前位置通过逆运动学计算出目标关节角度
+    3.将目标关节角度发送给机械臂控制
+    """
     def send_command(self, arm_position_command, arm_orientation_command):
         pose_command = arm_position_command[:2]
         # z_command = arm_position_command[2]
@@ -696,7 +733,6 @@ class Huilin():
         #     print("写入成功")
 
 
-        
     def get_movej_error_message(self,code):
         if code == 1:
             self.logger.log_info(f'moveJ code: {code},' + movej_error_codes.get(code, "未知错误码"))

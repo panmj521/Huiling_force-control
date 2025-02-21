@@ -108,17 +108,20 @@ class HybridController(BaseController):
         #     MAX_INTEGRAL
         # )
 
-        if abs(self.e_t) < 0.3:  # 误差小于0.3N时
-            self.force_control_value *= 0.7  # 衰减积分积累
-            
-        self.state.arm_desired_acc[2] = (1.0 / self.force_mass) * (self.force_control_value - self.force_damp * self.state.arm_desired_twist[2])
+        if abs(force_err) < 0.3:  # 误差小于0.3N时,进行衰减积分积累
+            self.force_control_value *= 0.5 
+        #老版本力控环境
+        # self.state.arm_desired_acc[2] = (1.0 / self.force_mass) * (self.force_control_value - self.force_damp * self.state.arm_desired_twist[2])
+        #符合实际情境的力控环境
+        self.state.arm_desired_acc[2] = (1.0 / self.force_mass) * (self.force_control_value - self.force_damp * self.state.arm_desired_twist[2] - \
+                                                                   self.state.external_wrench_tcp[2])
 
         self.pose_integral_error +=  self.state.pose_error * dt
         # 位控制
         self.state.arm_desired_acc[:2] = -self.Kd @ self.state.arm_desired_twist[:2] - self.Kp @ self.state.pose_error[:2] - self.Ki @ self.pose_integral_error[:2]
 
         # self.clip_command(self.state.arm_desired_acc,"acc")
-        self.state.arm_desired_twist = self.state.arm_desired_acc * dt + self.state.arm_desired_twist
+        self.state.arm_desired_twist += self.state.arm_desired_acc * dt 
         # self.clip_command(self.state.arm_desired_twist,"vel")
 
         delta_pose = self.state.arm_desired_twist * dt
@@ -138,7 +141,14 @@ class HybridController(BaseController):
 
         if time.time() - self.laset_print_time > 0.1:
             print("-----------------hybrid1-------------------------------")
+            print("观察Z轴方向数据变化")
             print("force_control_value",self.force_control_value)
+            print("arm_desired_acc[2]",self.state.arm_desired_acc[2])
+            print("arm_desired_twist[2]",self.state.arm_desired_twist[2])
+            print("delta_pose[2]",delta_pose[2])
+            print("arm_position_command[2]",self.state.arm_position_command[2])
+            print("-----------------hybrid1-------------------------------")
+
             # print("arm_position:",self.state.arm_position)
             # print("desired_position:",self.state.desired_position)
             # # print("arm_orientation",R.from_quat(self.state.arm_orientation).as_euler('xyz',degrees=True))
