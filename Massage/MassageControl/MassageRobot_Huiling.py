@@ -542,7 +542,10 @@ class MassageRobot:
     #####################################################################################################
     def step(self,dt):
         self.controller_manager.step(dt)
-               
+
+    """
+    力传感器数据更新线程，更新频率为sensor_rate
+    """           
     def sensor_measure_loop(self):
         self.logger.log_info("力传感器测量线程启动")
         while (not self.arm.is_exit) and (not self.exit_event.is_set()):
@@ -554,7 +557,9 @@ class MassageRobot:
                 self.logger.log_error(f"传感器数据读取失败:{e}")
                 self.exit_event.set()
             self.sensor_rate.sleep()
-
+    """
+    机械臂数据更新线程，更新频率为arm_rate。
+    """
     def arm_measure_loop(self):
         self.logger.log_info("机械臂测量线程启动")
         while (not self.arm.is_exit) and (not self.exit_event.is_set()):
@@ -590,6 +595,9 @@ class MassageRobot:
     #             self.exit_event.set()
     #         self.xy_control_rate.sleep()
 
+    """
+    机械臂控制线程
+    """
     def arm_command_loop(self):
         self.logger.log_info("机械臂控制线程启动")
         while (not self.arm.is_exit) and (not self.exit_event.is_set()):
@@ -612,7 +620,9 @@ class MassageRobot:
                 self.logger.log_error(f"机械臂控制失败:{e}")
                 self.exit_event.set()
             self.xy_control_rate.sleep()
-
+    """
+    z轴控制线程
+    """
     def arm_command_loop_z(self):
         self.logger.log_info("机械臂z轴升降控制线程启动")
         while (not self.arm.is_exit) and (not self.exit_event.is_set()):
@@ -1620,6 +1630,7 @@ if __name__ == "__main__":
     # robot.switch_payload('thermotherapy_head')
     # robot.switch_payload('shockwave_head')
     robot.switch_payload('ball_head')
+
     # robot.switch_payload('wash_head')
 
     # robot.controller_manager.switch_controller('admittance')
