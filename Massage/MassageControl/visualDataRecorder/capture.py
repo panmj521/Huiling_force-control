@@ -76,7 +76,30 @@ def capture_and_save(cam,num):
     cv2.imwrite(filename,rgb_image)
     print(filename + "已保存")
 
+def report_my_pos(robot,Z): # my_Huilin
+    robot.robot.get_scara_param()
+    print("XYR_OG",robot.robot.x,robot.robot.y,Z,robot.robot.r)
+    cur_pos,cur_angle = robot.get_arm_position()
+    print("cur_pos_with_extended_arm",cur_pos)
+
 if __name__ == '__main__':
+
+    # input info
+    # Z-axis
+    angle_Z = [20,225,80]
+    # relative movement
+    # direction - X
+    dis_X = 75
+    # direction - Y
+    dis_Y = -45
+    # X-axis -4.5 为原点 -4 为反转22.5度，-5 为正转22.5度
+
+
+
+
+    input_X = -3.2
+    # direction - Z
+    dis_Z = 0
     # robot
     my_Huilin = Huilin()
     time.sleep(0.02)
@@ -90,24 +113,32 @@ if __name__ == '__main__':
     odrv0.axis0.controller.config.input_mode=odrive.utils.InputMode.POS_FILTER
     odrv0.axis0.requested_state=odrive.utils.AxisState.CLOSED_LOOP_CONTROL
     ###################################
+    # P2P
+    my_Huilin.move_pose([249.17990112304688,-108.0781021118164,0],[0,0,118.0],lr=-1)
+    my_Huilin.robot.wait_stop()
+    ###################################
+    # direction Z-motor
+    my_Huilin._move_z_axis_p(dis_Z)
+    time.sleep(1.5) # 阻塞
     # Z轴先转动
     # def new_movej_angle(self, goal_angle1, goal_angle2, goal_z, goal_r, speed,roughly) deg deg mm deg mm/s deg/s
-    my_Huilin.move_joint([20,225,108],0)
-    time.sleep(0.1)
+    # my_Huilin.move_joint(angle_Z,0)
+    # time.sleep(0.1)
     # 位置相对移动
-    my_Huilin.robot.xyz_move(1,80,10)
-    my_Huilin.robot.wait_stop()
-    # my_Huilin.robot.xyz_move(2,20,10)
+    # my_Huilin.robot.xyz_move(1,dis_X,10)
     # my_Huilin.robot.wait_stop()
-    time.sleep(0.5)
+    # my_Huilin.robot.xyz_move(2,dis_Y,10)
+    # my_Huilin.robot.wait_stop()
+    # time.sleep(0.5)
     ###################################
     # X轴旋转
     #####################
-    input_pos = 4.5 # 4.5为原点， 大于4.5为反转，小于为正转
+    # input_pos = -4.2 # -4 为反转22.5度，-5 为正转22.5度
     ###################
-    odrv0.axis0.controller.input_pos = input_pos
+    input_pos = input_X
+    odrv0.axis0.controller.input_pos = input_X
     time.sleep(4)
-    q5_deg = (input_pos-4.5)*(-45)
+    q5_deg = (input_pos+3.5)*(-45)
     print("q5_deg:", q5_deg)
     RX = np.deg2rad(q5_deg)
     # 记录当前正运动学姿态矩阵（不计末端轴旋转的正运动学矩阵，仅获取位置）
@@ -126,7 +157,15 @@ if __name__ == '__main__':
     ori = [RX,RY,RZ] # 记录顺序 X Y Z (rad) 还原时应采用计算顺序Z Y X
     print("pos:",pos)
     print("ori:",ori)
-    with open("./visualDataRecorder/pose.txt", "a") as f:
-        f.write(f"{pos[0]} {pos[1]} {pos[2]} {ori[0]} {ori[1]} {ori[2]}\n")
     
-    capture_and_save(cam,5)
+    # with open("./visualDataRecorder/pose.txt", "a") as f:
+    #     f.write(f"{pos[0]/1000},{pos[1]/1000},{dis_Z/1000},{ori[0]},{ori[1]},{ori[2]}\n")
+    
+    # capture_and_save(cam,14)
+
+    # test
+    rgb_image, depth_image, camera_intrinsics = cam.get_latest_frame()
+    cv2.imshow('img',rgb_image)
+    cv2.waitKey()
+
+    report_my_pos(my_Huilin,dis_Z)

@@ -102,11 +102,12 @@ class Identifier:
 
 
         for i in range(cnt):
-            control_pose[0]+= 1
-            control_pose[1]+= 1
-            self.arm.send_command(control_pose,0)
+            control_pose[1]+= 5
+            control_pose[2]+= 5
+            # self.arm.send_command(control_pose,0)
+            self.arm.move_joint(control_pose,0,5)
+            time.sleep(2)
             print("move done")
-            time.sleep(1.5)
             wrench = self.__read_data_once(sample_num)
             print(f"wrench:{wrench}")
             print("read done")
@@ -159,15 +160,16 @@ if __name__ == '__main__':
     sensor.disable_active_transmission()
     sensor.disable_active_transmission()
     sensor.disable_active_transmission()
-    identifier = Identifier(arm=arm,sensor=sensor,config_path="/home/jsfb/jsfb_ws/MassageRobot_huiling/Massage/MassageControl/global_config/massage_head/roller_playload.yaml")
+    identifier = Identifier(arm=arm,sensor=sensor,config_path="/home/jsfb/jsfb_ws/MassageRobot_huiling/Massage/MassageControl/global_config/massage_head/ball_playload.yaml")
     # atexit.register(sensor.disconnect)
 
-    ready_pose,_ = arm.get_arm_position()
+    arm.get_arm_position()
+    ready_pose = arm.cur_angle
     print(ready_pose)
     identifier.identify_param_auto(ready_pose,15)
-    fin_pose,_ = arm.get_arm_position()
-    print(fin_pose)
-
+    arm.get_arm_position()
+    ready_pose = arm.cur_angle
+    print(ready_pose)
 
 
 

@@ -232,7 +232,9 @@ class MassageRobot:
             file_address = massage_head_dir + '/' + file
             play_load = read_yaml(file_address)
             self.playload_dict[play_load['name']] = play_load
+
         self.current_head = 'none'
+        print(self.playload_dict)
 
         self.is_waitting = False
 
@@ -1607,7 +1609,7 @@ if __name__ == "__main__":
    
     signal.signal(signal.SIGINT, signal_handler)
     
-    robot.init_hardwares([ 482.22320556 ,-154.47224015 , 500, np.pi, 0, 0])
+    robot.init_hardwares([ 482 ,-154 , 450, np.pi, 0, 0])
     # robot.move_to_points(1.247456,pose=[0.247,0.1043,0.761,0,0,0],is_interrupt=False)
     # traj = robot.traj_generate(1.247456,pose=[0.247,0.1043,0.761,0,0,0],interpolation='linear')
     # print(traj)
@@ -1617,7 +1619,7 @@ if __name__ == "__main__":
     robot.sensor_enable()
     # robot.switch_payload('thermotherapy_head')
     # robot.switch_payload('shockwave_head')
-    robot.switch_payload('roller')
+    robot.switch_payload('ball_head')
     # robot.switch_payload('wash_head')
 
     # robot.controller_manager.switch_controller('admittance')
@@ -1626,6 +1628,8 @@ if __name__ == "__main__":
     # robot.arm_state.desired_wrench = np.array([0])
 
     robot.arm_state.desired_wrench = np.array([0,0,0,0,0,0])
+    robot.arm_state.desired_wrench = np.array([0,0.02733333374063174,0.1520000050465265,0,0,0])
+
     # 创建并启动一个新线程来运行robot.start()
     robot_thread = threading.Thread(target=robot.start)
     robot_thread.start()
