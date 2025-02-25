@@ -171,7 +171,8 @@ class Huilin():
         self.consecutive_errors = 0   # 记录连续错误次数
         self.max_consecutive_errors = 10  # 最大允许连续错误次数
 
-
+    #末端关节的初始化以及转动，后续需要的可以直接放在初始化的过程中
+    #参数自己还需要调节
     def end_rot(self):
         odrv0 = odrive.find_any()
         odrv0.axis0.controller.config.control_mode=odrive.utils.ControlMode.POSITION_CONTROL
@@ -377,7 +378,7 @@ class Huilin():
         # 精确转换系数：7290000/570 = 12789.4736842
         self.arm_z = z_value / 12789.4736842
         # 如果位置接近0，则设为0
-        if abs(self.arm_z) <= 0.1:
+        if abs(self.arm_z) <= 0.01:
             self.arm_z = 0
         arm_r = self.robot.r
         arm_x = arm_x + self.L3 * np.cos((arm_r-108)*np.pi/180)

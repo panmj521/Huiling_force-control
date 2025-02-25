@@ -75,7 +75,6 @@ class AdmittanceController(BaseController):
         delta_pose[:3] = R.from_quat(self.state.arm_orientation).as_matrix() @ delta_pose[:3]
 
         # delta_ori_mat = R.from_rotvec(delta_pose[3:]).as_matrix()
-
         # arm_ori_mat = R.from_quat(self.state.arm_orientation).as_matrix() @ delta_ori_mat 
         self.state.arm_position_command = self.state.arm_position + delta_pose[:3]
 

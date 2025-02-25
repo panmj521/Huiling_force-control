@@ -607,6 +607,11 @@ class MassageRobot:
                     # print(self.arm_state.arm_position_command)
                     self.last_command_time += 1
                     # print("self.arm_state.arm_position_command[:2]:",self.arm_state.arm_position_command[:2])
+                    """
+                    我说的阻塞存在于这，力控响应产生的角度过大时，会导致机械臂控制线程阻塞较长，导致整个流程如果控制频率是100hz，
+                    那么由于code = self.arm.send_command(self.arm_state.arm_position_command,self.arm_state.arm_orientation_command)这个函数的响应时间，
+                    可能控制频率降低到80hz，甚至更低。
+                    """
                     code = self.arm.send_command(self.arm_state.arm_position_command,self.arm_state.arm_orientation_command)
                     # if self.last_command_time > 10:
                     #     print("commandTime:",(time.time()-self.last_record_time)/self.last_command_time)
@@ -637,10 +642,10 @@ class MassageRobot:
                     #     print("commandTime:",(time.time()-self.last_record_time)/self.last_command_time)
                     #     self.last_record_time = time.time()
                     #     self.last_command_time = 0
-                    if code == -1:
-                        self.logger.log_error("机械臂急停")
-                        self.stop()
-                        break
+                    # if code == -1:
+                    #     self.logger.log_error("机械臂急停")
+                    #     self.stop()
+                    #     break
             except Exception as e:
                 self.logger.log_error(f"机械臂z轴控制失败:{e}")
                 self.exit_event.set()
@@ -1614,24 +1619,21 @@ if __name__ == "__main__":
 
     def signal_handler(signum, frame):
         robot.stop()
-
     robot = MassageRobot('/home/jsfb/jsfb_ws/MassageRobot_huiling/Massage/MassageControl/config/robot_config.yaml')
-   
     signal.signal(signal.SIGINT, signal_handler)
-    
+    #需要根据机械臂运动初始未知去设定，或者自定义位置去设定，后面的三个姿态也需要跟着改变，
+    # 后面的第一个为绕x轴旋转180度，这个固定不变，第二一直保持为0，关键是第三个，如果第三个初始位置是108度，
+    # 那么就是绕z轴旋转0度，如果变成118度
+    #就是118-108=10度，绕z轴旋转10度，所以这个值是根据机械臂初始位置来设定的
     robot.init_hardwares([ 482 ,-154 , 450, np.pi, 0, 0])
     # robot.move_to_points(1.247456,pose=[0.247,0.1043,0.761,0,0,0],is_interrupt=False)
     # traj = robot.traj_generate(1.247456,pose=[0.247,0.1043,0.761,0,0,0],interpolation='linear')
-    # print(traj)
-    # print(traj)
-    # robot.controller_manager.switch_controller('hybrid')
+ 
     robot.sensor_set_zero()
     robot.sensor_enable()
-    # robot.switch_payload('thermotherapy_head')
-    # robot.switch_payload('shockwave_head')
+
     robot.switch_payload('ball_head')
 
-    # robot.switch_payload('wash_head')
 
     # robot.controller_manager.switch_controller('admittance')
     robot.controller_manager.switch_controller('admittance')

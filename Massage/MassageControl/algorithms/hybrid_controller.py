@@ -107,12 +107,12 @@ class HybridController(BaseController):
         #     -MAX_INTEGRAL, 
         #     MAX_INTEGRAL
         # )
-
-        if abs(force_err) < 0.3:  # 误差小于0.3N时,进行衰减积分积累
-            self.force_control_value *= 0.5 
+        # 实际力小于0.3N时,进行衰减积分积累
+        if abs(self.state.external_wrench_tcp) < 0.3:  
+            self.force_control_value *= 0.7
         #老版本力控环境
         # self.state.arm_desired_acc[2] = (1.0 / self.force_mass) * (self.force_control_value - self.force_damp * self.state.arm_desired_twist[2])
-        #符合实际情境的力控环境
+        #符合实际情境的力控环境加速度计算
         self.state.arm_desired_acc[2] = (1.0 / self.force_mass) * (self.force_control_value - self.force_damp * self.state.arm_desired_twist[2] - \
                                                                    self.state.external_wrench_tcp[2])
 
@@ -148,7 +148,6 @@ class HybridController(BaseController):
             print("delta_pose[2]",delta_pose[2])
             print("arm_position_command[2]",self.state.arm_position_command[2])
             print("-----------------hybrid1-------------------------------")
-
             # print("arm_position:",self.state.arm_position)
             # print("desired_position:",self.state.desired_position)
             # # print("arm_orientation",R.from_quat(self.state.arm_orientation).as_euler('xyz',degrees=True))
